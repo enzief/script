@@ -3,7 +3,7 @@
 # --- Configuration ---
 # Hardcoded remote name per your request
 REMOTE_NAME="mega"
-REMOTE_PATH="devicesync/iphone_F2LN2G1MFF9R/DCIM/100APPLE"
+REMOTE_PATH="devicesync/2019"
 # --- Argument Mapping ---
 if [[ $# -lt 3 ]]; then
     echo "Usage: $0 <local_src> <shadow_dir> <sync_dir>"
