@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+FILE="${(l:4::0:)1}.jpg"
+
+convert -rotate 90 $FILE $FILE
