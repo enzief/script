@@ -73,6 +73,12 @@ None yet.
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260805-ety | Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory, mirroring sibling project byse's convention. Update all path references across the repo including committed Phase 1 plans. | 2026-08-05 | 85a8fed | [260805-ety-move-local-filesys-manga-and-remote-into](./quick/260805-ety-move-local-filesys-manga-and-remote-into/) |
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -88,3 +94,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-05T13:06:17.051Z
 Stopped at: Phase 1 context gathered
 Resume file: .planning/phases/01-local-filesystem/01-CONTEXT.md
+Last activity: 2026-08-05 - Completed quick task 260805-ety: Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory
