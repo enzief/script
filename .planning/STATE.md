@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: local-filesystem
-status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-08-05T18:48:39.485Z"
+status: verifying
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-08-05T18:56:31.512Z"
 last_activity: 2026-08-05
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-05)
 
 Phase: 01 (local-filesystem) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-05 — Phase 01 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 79min | 2 tasks | 2 files |
+| Phase 01 P02 | 4min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - Roadmap: Existing scripts marked Validated in PROJECT.md, but their bugs are in-scope Active work for this pass
 - [Phase ?]: LOCALFS-01 subshell diagnosis empirically disproven for zsh; retain-dir-struct-2-sorted.zsh hardening (process substitution, --dry-run, print -r --) shipped as defensive hardening, not a bug fix
 - [Phase ?]: Chose manual assert-style zsh test (TESTING.md Option 3) over bats: bats not installed, avoids new external dependency
+- [Phase ?]: LOCALFS-02 subshell diagnosis empirically disproven for zsh (same as LOCALFS-01); retain-dir-struct-3-find-sorted.zsh's process-substitution conversion shipped as hardening, not a bug fix
+- [Phase ?]: PATTERNS.md understated script 3's echo usage as zero; it had 8 echo calls, all converted to print -r -- per D-03
+- [Phase ?]: Dash-swallowing trap from plan 01-01 recurred on 12 more call sites across scripts 1 and 3; all converted to print -r --, with exact-count separator assertions added to the test
 
 ### Pending Todos
 
@@ -98,7 +102,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-05T18:48:39.471Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-08-05T18:56:31.500Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
 Last activity: 2026-08-05 - Completed quick task 260805-ety: Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory

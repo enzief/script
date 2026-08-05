@@ -10,8 +10,8 @@ Requirements for the current bug-fix/consistency pass. Each maps to a topic-phas
 ### Local Filesystem
 
 - [x] **LOCALFS-01**: `retain-dir-struct-2-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `shadow_map` (populated via process substitution) is unreadable in the `find | while` loop that looks it up, causing every lookup to silently fail
-- [ ] **LOCALFS-02**: `retain-dir-struct-3-find-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `file_map` (populated in the parent shell) is unreadable in the `find | while` loop that looks it up
-- [ ] **LOCALFS-03**: `retain-dir-struct-1.zsh` uses consistent output commands (`print`, not a mix of `echo` and `print`)
+- [x] **LOCALFS-02**: `retain-dir-struct-3-find-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `file_map` (populated in the parent shell) is unreadable in the `find | while` loop that looks it up
+- [x] **LOCALFS-03**: `retain-dir-struct-1.zsh` uses consistent output commands (`print`, not a mix of `echo` and `print`)
 
 ### Manga
 
@@ -53,8 +53,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | LOCALFS-01 | Phase 1 | Complete |
-| LOCALFS-02 | Phase 1 | Pending |
-| LOCALFS-03 | Phase 1 | Pending |
+| LOCALFS-02 | Phase 1 | Complete |
+| LOCALFS-03 | Phase 1 | Complete |
 | MANGA-01 | Phase 2 | Pending |
 | REMOTE-01 | Phase 3 | Pending |
 | REMOTE-02 | Phase 3 | Pending |
