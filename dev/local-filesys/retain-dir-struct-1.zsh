@@ -2,7 +2,7 @@
 
 # Check for arguments
 if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <source_directory> <target_shadow_directory>"
+    print -u2 -r -- "Usage: $0 <source_directory> <target_shadow_directory>"
     exit 1
 fi
 
@@ -12,7 +12,7 @@ TGTDIR=${2%/}
 # Create target if it doesn't exist
 mkdir -p "$TGTDIR"
 
-echo "Creating Shadow Map in '$TGTDIR'..."
+print -r -- "Creating Shadow Map in '$TGTDIR'..."
 
 # Find all files in the source
 # Using -print0 to handle filenames with spaces safely
@@ -29,10 +29,10 @@ find "$SRCDIR" -type f -print0 | while IFS= read -r -d '' srcfile; do
 
     # Generate the hash and write it to the pointer file
     # We use sha256sum (standard on Linux)
-    print "Hashing: $relpath"
+    print -r -- "Hashing: $relpath"
     sha256sum "$srcfile" > "$shadowfile"
 
 done
 
-echo "---"
-echo "Shadow Map Complete!"
+print -r -- "---"
+print -r -- "Shadow Map Complete!"
