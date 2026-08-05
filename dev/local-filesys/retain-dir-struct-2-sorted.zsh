@@ -21,8 +21,10 @@ NEW_SHADOW=${3%/}
 [[ ! -d "$REORG_DIR" ]] && { print -u2 -r -- "Error: Reorganized data dir not found."; exit 1 }
 [[ ! -d "$OLD_SHADOW" ]] && { print -u2 -r -- "Error: Old shadow dir not found."; exit 1 }
 
-# Create the new shadow root
-mkdir -p "$NEW_SHADOW"
+# Create the new shadow root (skip in dry-run so nothing is written to disk)
+if (( ! DRY_RUN )); then
+    mkdir -p "$NEW_SHADOW"
+fi
 
 # 1. Build a lookup table of existing shadow files
 # Map: [Hash] -> [Path to the .txt file]
@@ -68,4 +70,8 @@ while IFS= read -r -d '' real_file; do
 done < <(find "$REORG_DIR" -type f -not -path "*/.*" -print0)
 
 print -r -- "----------------------------------------------------"
-print -r -- "Done! New shadow structure created at: $NEW_SHADOW"
+if (( DRY_RUN )); then
+    print -r -- "Dry run complete. No files were copied."
+else
+    print -r -- "Done! New shadow structure created at: $NEW_SHADOW"
+fi
