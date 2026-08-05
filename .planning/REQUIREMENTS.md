@@ -9,7 +9,7 @@ Requirements for the current bug-fix/consistency pass. Each maps to a topic-phas
 
 ### Local Filesystem
 
-- [ ] **LOCALFS-01**: `retain-dir-struct-2-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `shadow_map` (populated via process substitution) is unreadable in the `find | while` loop that looks it up, causing every lookup to silently fail
+- [x] **LOCALFS-01**: `retain-dir-struct-2-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `shadow_map` (populated via process substitution) is unreadable in the `find | while` loop that looks it up, causing every lookup to silently fail
 - [ ] **LOCALFS-02**: `retain-dir-struct-3-find-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `file_map` (populated in the parent shell) is unreadable in the `find | while` loop that looks it up
 - [ ] **LOCALFS-03**: `retain-dir-struct-1.zsh` uses consistent output commands (`print`, not a mix of `echo` and `print`)
 
@@ -52,7 +52,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOCALFS-01 | Phase 1 | Pending |
+| LOCALFS-01 | Phase 1 | Complete |
 | LOCALFS-02 | Phase 1 | Pending |
 | LOCALFS-03 | Phase 1 | Pending |
 | MANGA-01 | Phase 2 | Pending |
@@ -62,6 +62,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REMOTE-04 | Phase 3 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 8 total
 - Mapped to phases: 8 (Phase 1: 3, Phase 2: 1, Phase 3: 4)
 - Unmapped: 0 ✓

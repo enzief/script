@@ -29,10 +29,10 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
   2. `retain-dir-struct-3-find-sorted.zsh` correctly finds hash matches via `file_map` instead of every lookup silently returning empty
   3. `retain-dir-struct-1.zsh` uses `print` consistently for all output, with no remaining `echo` calls
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — `retain-dir-struct-2-sorted.zsh` end-to-end: process-substitution loops, `print`-only output, `--dry-run` flag, plus the tracked regression test
+- [x] 01-01-PLAN.md — `retain-dir-struct-2-sorted.zsh` end-to-end: process-substitution loops, `print`-only output, `--dry-run` flag, plus the tracked regression test
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -75,6 +75,6 @@ Phases have no dependency ordering — they are independent topic-phases and may
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Local Filesystem | 0/2 | Not started | - |
+| 1. Local Filesystem | 1/2 | In Progress|  |
 | 2. Manga | 0/TBD | Not started | - |
 | 3. Remote | 0/TBD | Not started | - |
