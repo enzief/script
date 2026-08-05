@@ -25,7 +25,11 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
   1. `retain-dir-struct-2-sorted.zsh` correctly finds hash matches via `shadow_map` instead of every lookup silently returning empty
   2. `retain-dir-struct-3-find-sorted.zsh` correctly finds hash matches via `file_map` instead of every lookup silently returning empty
   3. `retain-dir-struct-1.zsh` uses `print` consistently for all output, with no remaining `echo` calls
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 01-01-PLAN.md — `retain-dir-struct-2-sorted.zsh` end-to-end: process-substitution loops, `print`-only output, `--dry-run` flag, plus the tracked regression test
+- [ ] 01-02-PLAN.md — `retain-dir-struct-3-find-sorted.zsh` and `retain-dir-struct-1.zsh`: process-substitution lookup loop, `print`-only output, stderr for errors, test extended to all three scripts
+
+> **Planning note (2026-08-05):** the subshell variable-scope premise behind success criteria 1 and 2 was empirically disproven during planning — zsh runs the last element of a pipeline in the current shell, so both lookups already work today. Criteria 1 and 2 are already TRUE before any code change; the plans deliver the loop conversion as hardening. See `01-01-PLAN.md` objective for the evidence. Criteria wording left unchanged pending developer review.
 
 ### Phase 2: Manga
 **Goal**: `manga` scripts remain reliable and handle image-dimension detection failures explicitly
@@ -56,6 +60,6 @@ Phases have no dependency ordering — they are independent topic-phases and may
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Local Filesystem | 0/TBD | Not started | - |
+| 1. Local Filesystem | 0/2 | Not started | - |
 | 2. Manga | 0/TBD | Not started | - |
 | 3. Remote | 0/TBD | Not started | - |
