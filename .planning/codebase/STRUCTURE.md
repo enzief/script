@@ -6,22 +6,23 @@
 
 ```
 script/
-├── dev/manga/                                    # Manga page numbering utilities
-│   └── number-pages.zsh                      # Rename images to sequential page numbers
-│
-├── dev/local-filesys/                            # Local filesystem operations
-│   ├── retain-dir-struct-1.zsh               # Stage 1: Create shadow map (hash-based)
-│   ├── retain-dir-struct-2-sorted.zsh        # Stage 2: Sync shadow files to new structure
-│   └── retain-dir-struct-3-find-sorted.zsh   # Stage 3: Map shadow files back to originals
-│
-├── dev/remote/                                   # Remote file synchronization (MEGA)
-│   ├── rename-remote-files-1-match-remote.zsh      # Stage 1: Match local to remote, create sync
-│   └── rename-remote-files-2-rename-local.zsh      # Stage 2: Revert files, trigger renames
+├── dev/                                            # All script source (topic folders live here)
+│   ├── manga/                                      # Manga page numbering utilities
+│   │   └── number-pages.zsh                        # Rename images to sequential page numbers
+│   │
+│   ├── local-filesys/                              # Local filesystem operations
+│   │   ├── retain-dir-struct-1.zsh                 # Stage 1: Create shadow map (hash-based)
+│   │   ├── retain-dir-struct-2-sorted.zsh          # Stage 2: Sync shadow files to new structure
+│   │   └── retain-dir-struct-3-find-sorted.zsh     # Stage 3: Map shadow files back to originals
+│   │
+│   └── remote/                                     # Remote file synchronization (MEGA)
+│       ├── rename-remote-files-1-match-remote.zsh        # Stage 1: Match local to remote, create sync
+│       └── rename-remote-files-2-rename-local.zsh        # Stage 2: Revert files, trigger renames
 │
 └── .planning/
-    └── codebase/                             # Architecture documentation
-        ├── ARCHITECTURE.md                   # System design and patterns
-        └── STRUCTURE.md                      # This file
+    └── codebase/                                   # Architecture documentation
+        ├── ARCHITECTURE.md                         # System design and patterns
+        └── STRUCTURE.md                            # This file
 ```
 
 ## Directory Purposes

@@ -9,7 +9,7 @@
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           Entry Points                                    │
 │  Manga Renaming  │  Filesystem Indexing  │  Remote Sync Management       │
-│ `dev/manga/*.zsh`    │  `dev/local-filesys/*.zsh` │  `dev/remote/*.zsh`              │
+│ `dev/manga/*`    │  `dev/local-filesys/*` │  `dev/remote/*`              │
 └────────┬─────────┴───────────┬────────────┴─────────────┬────────────────┘
          │                     │                          │
          ▼                     ▼                          ▼
