@@ -19,7 +19,7 @@ print -r -- "Creating Shadow Map in '$TGTDIR'..."
 
 # Find all files in the source
 # Using -print0 to handle filenames with spaces safely
-find "$SRCDIR" -type f -print0 | while IFS= read -r -d '' srcfile; do
+while IFS= read -r -d '' srcfile; do
 
     # Calculate the path relative to the source root
     relpath="${srcfile#$SRCDIR/}"
@@ -35,7 +35,7 @@ find "$SRCDIR" -type f -print0 | while IFS= read -r -d '' srcfile; do
     print -r -- "Hashing: $relpath"
     sha256sum "$srcfile" > "$shadowfile"
 
-done
+done < <(find "$SRCDIR" -type f -print0)
 
 print -r -- "---"
 print -r -- "Shadow Map Complete!"
