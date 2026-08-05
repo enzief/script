@@ -41,10 +41,10 @@ Deferred — acknowledged as valuable but not part of the current bug-fix pass.
 
 | Feature | Reason |
 |---------|--------|
-| Formal test suite / CI | Personal lightweight tooling — user explicitly chose no test infrastructure over process overhead |
 | Roadmap-driven feature growth beyond the current bug-fix scope | Topics are independent tools with no shared end goal; new capability ideas become separate future phases via `/gsd-phase`, not scope creep on this pass |
 | GUI, packaging, or distribution | Single-user CLI tools run directly from this repo, never shipped to others |
 | Parallelization / performance rework (e.g. GNU parallel, incremental hashing) | Not blocking current correctness work; revisit only if a script becomes a real bottleneck in practice |
+| CI pipeline | Tests run locally on demand (reversed the earlier "no test suite" call during Phase 1 discussion) — but no CI service is being configured |
 
 ## Traceability
 

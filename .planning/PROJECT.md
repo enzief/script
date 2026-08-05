@@ -26,9 +26,9 @@ Each script does its one job correctly and safely — these scripts move, rename
 
 ### Out of Scope
 
-- Formal test suite / CI — personal lightweight tooling, user explicitly opted for no test infrastructure over process overhead
 - A unifying roadmap or MVP arc across topics — scripts are independent tools with no shared end goal, each topic-phase just needs to reach "works reliably"
 - GUI, packaging, or distribution — single-user CLI tools run directly from this repo, not shipped to others
+- CI pipeline — tests run locally on demand, not on every push; no CI service configured
 
 ## Context
 
@@ -39,7 +39,8 @@ Each script does its one job correctly and safely — these scripts move, rename
 ## Constraints
 
 - **Tech stack**: zsh only, no new languages/runtimes — matches the existing scripts and the user's environment
-- **Process**: Lightweight — fix real bugs and rough edges, no speculative abstraction, no test suite unless a specific script proves too risky to change blind
+- **Process**: Lightweight otherwise — fix real bugs and rough edges, no speculative abstraction beyond what's needed
+- **Testing**: Bug fixes get a tracked test file (e.g. bats) validating the fix, committed to the repo — reverses the initial "no test suite" call; the local-filesys subshell bugs went unnoticed for a long time with no way to catch a regression
 - **Scope per phase**: Each topic-phase is "done" when its existing scripts work reliably for their current use cases — not when new capabilities are added
 
 ## Key Decisions
@@ -48,8 +49,8 @@ Each script does its one job correctly and safely — these scripts move, rename
 |----------|-----------|---------|
 | One phase per topic folder, no dependency ordering between phases | Scripts are unrelated tools grouped only by subject area; there's no natural build sequence | — Pending |
 | Existing scripts marked Validated, but their bugs are in-scope Active work | User wants correctness/consistency/usability fixes now, not just documentation of what exists | — Pending |
-| No formal test suite / CI | Personal tooling; user explicitly chose lightweight process over test infrastructure | — Pending |
 | New topics added later via `/gsd-phase`, not pre-planned | User doesn't know future topics yet — they'll emerge organically | — Pending |
+| Reversed: bug fixes now get a tracked test suite (project-wide) | Decided during Phase 1 discussion — subshell bugs went undetected for a long time; a tracked test file catches regressions without needing full CI | — Pending |
 
 ## Evolution
 
