@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: local-filesystem
-status: verifying
+current_phase: 2
+current_phase_name: Manga
+status: planning
 stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-08-05T18:56:31.512Z"
+last_updated: "2026-08-05T22:24:34.668Z"
 last_activity: 2026-08-05
-last_activity_desc: Phase 01 execution started
+last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
   total_phases: 1
   completed_phases: 1
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-05)
 
 **Core value:** Each script does its one job correctly and safely — these scripts move, rename, and reorganize real files (including on a remote MEGA store), so correctness matters more than feature breadth or polish.
-**Current focus:** Phase 01 — local-filesystem
+**Current focus:** Phase 2 — manga
 
 ## Current Position
 
-Phase: 01 (local-filesystem) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-08-05 — Phase 01 execution started
+Phase: 2 — Manga
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-05 — Phase 01 complete, transitioned to Phase 2
 
 Progress: [██████████] 100%
 
@@ -38,7 +38,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 2
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -46,7 +46,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 2 | - | - |
 
 **Recent Trend:**
 
@@ -75,6 +75,7 @@ Recent decisions affecting current work:
 - [Phase ?]: LOCALFS-02 subshell diagnosis empirically disproven for zsh (same as LOCALFS-01); retain-dir-struct-3-find-sorted.zsh's process-substitution conversion shipped as hardening, not a bug fix
 - [Phase ?]: PATTERNS.md understated script 3's echo usage as zero; it had 8 echo calls, all converted to print -r -- per D-03
 - [Phase ?]: Dash-swallowing trap from plan 01-01 recurred on 12 more call sites across scripts 1 and 3; all converted to print -r --, with exact-count separator assertions added to the test
+- [Phase 01]: Post-plan code review found 2 real bugs the plans' own diagnosis missed: scripts 1/2 silently reported success on a missing source directory (CR-01), and --dry-run still created its destination directory and printed a false "created" message (CR-02). Both fixed in commits ef1fa12/9b1bf6b, confirmed by phase verification and UAT.
 
 ### Pending Todos
 
@@ -82,7 +83,7 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- ⚠️ [Phase 01] The 29-assertion regression test does not yet cover the two bugs fixed post-review (CR-01: missing-directory validation, CR-02: --dry-run not creating its destination dir). Both behaviors are manually confirmed correct as of Phase 01 verification, but nothing in the automated suite would catch a future regression on either. Recommend a follow-up quick-fix adding these two assertion groups to dev/local-filesys/tests/test-retain-dir-struct.zsh.
 
 ### Quick Tasks Completed
 
@@ -102,7 +103,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-05T18:56:31.500Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-08-05T22:25:57.000Z
+Stopped at: Phase 01 complete, ready to plan Phase 2
 Resume file: None
-Last activity: 2026-08-05 - Completed quick task 260805-ety: Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory
+Last activity: 2026-08-05 - Phase 01 (local-filesystem) marked complete: code review fixes applied, security reviewed, UAT passed

@@ -16,10 +16,10 @@ Each script does its one job correctly and safely — these scripts move, rename
 - ✓ Missing manga page detection by comparing two chapter/version directories — existing
 - ✓ Sequential manga page renumbering with chapter/suffix support — existing
 - ✓ Remote (MEGA via rclone) file matching and renaming to mirror local structure (2-step: match, then rename) — existing
+- ✓ `local-filesys` scripts behave correctly and consistently — Phase 01 (process-substitution loops replacing subshell-fragile pipes, `print -r --` output standardization across all three scripts, `--dry-run` preview on `retain-dir-struct-2-sorted.zsh`, 29-assertion regression test)
 
 ### Active
 
-- [ ] `local-filesys` scripts behave correctly and consistently (fix the subshell variable-scope bugs in `retain-dir-struct-2-sorted.zsh` and `retain-dir-struct-3-find-sorted.zsh` that make lookups silently fail; standardize on `print` over mixed `echo`/`print`)
 - [ ] `manga` scripts remain reliable and get usability polish (explicit error handling around `identify`/ImageMagick calls)
 - [ ] `remote` scripts behave correctly and safely (fix the subshell scope bug in `rename-remote-files-1-match-remote.zsh` that makes matching always fail; add `command -v` checks for `rclone`/`jq`; validate sourced shadow-file variables before use in `rename-remote-files-2-rename-local.zsh`; move hardcoded remote name/path out of plaintext)
 - [ ] New topics/scripts get added ad hoc as new needs arise (open-ended — no fixed set)
@@ -47,10 +47,10 @@ Each script does its one job correctly and safely — these scripts move, rename
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| One phase per topic folder, no dependency ordering between phases | Scripts are unrelated tools grouped only by subject area; there's no natural build sequence | — Pending |
-| Existing scripts marked Validated, but their bugs are in-scope Active work | User wants correctness/consistency/usability fixes now, not just documentation of what exists | — Pending |
+| One phase per topic folder, no dependency ordering between phases | Scripts are unrelated tools grouped only by subject area; there's no natural build sequence | Phase 01 followed this — independent from Phase 02/03 |
+| Existing scripts marked Validated, but their bugs are in-scope Active work | User wants correctness/consistency/usability fixes now, not just documentation of what exists | Phase 01: the assumed subshell root cause was actually a misdiagnosis (zsh runs the last pipeline element in the current shell, unlike bash), so the fix shipped as hardening; code review then found and fixed 2 real bugs the original diagnosis missed (silent false-success on a missing source dir, `--dry-run` still writing to disk) |
 | New topics added later via `/gsd-phase`, not pre-planned | User doesn't know future topics yet — they'll emerge organically | — Pending |
-| Reversed: bug fixes now get a tracked test suite (project-wide) | Decided during Phase 1 discussion — subshell bugs went undetected for a long time; a tracked test file catches regressions without needing full CI | — Pending |
+| Reversed: bug fixes now get a tracked test suite (project-wide) | Decided during Phase 1 discussion — subshell bugs went undetected for a long time; a tracked test file catches regressions without needing full CI | Delivered in Phase 01: 29-assertion `dev/local-filesys/tests/test-retain-dir-struct.zsh` covering all three scripts |
 
 ## Evolution
 
@@ -70,4 +70,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-05 after initialization*
+*Last updated: 2026-08-05 after Phase 01*

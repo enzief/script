@@ -11,7 +11,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Local Filesystem** - Fix subshell variable-scope bugs and standardize output commands in the `local-filesys` scripts
+- [x] **Phase 1: Local Filesystem** - Fix subshell variable-scope bugs and standardize output commands in the `local-filesys` scripts (completed 2026-08-05)
 - [ ] **Phase 2: Manga** - Add explicit error handling around image-dimension detection in the `manga` scripts
 - [ ] **Phase 3: Remote** - Fix the remote matching bug, add dependency checks, validate shadow-file variables, and remove hardcoded config from the `remote` scripts
 
@@ -75,6 +75,6 @@ Phases have no dependency ordering — they are independent topic-phases and may
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Local Filesystem | 2/2 | In Progress|  |
+| 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 0/TBD | Not started | - |
 | 3. Remote | 0/TBD | Not started | - |
