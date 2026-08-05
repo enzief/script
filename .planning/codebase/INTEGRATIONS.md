@@ -27,8 +27,8 @@
 
 **Caching:**
 - Associative array caching in zsh runtime during script execution
-  - File maps built for fast lookups: `remote_map[$size]` in `remote/rename-remote-files-1-match-remote.zsh`
-  - Shadow file index caching: `shadow_map[$hash]` in `local-filesys/retain-dir-struct-2-sorted.zsh`
+  - File maps built for fast lookups: `remote_map[$size]` in `dev/remote/rename-remote-files-1-match-remote.zsh`
+  - Shadow file index caching: `shadow_map[$hash]` in `dev/local-filesys/retain-dir-struct-2-sorted.zsh`
   - No persistent cache; rebuild on each run
 
 ## Authentication & Identity
@@ -46,7 +46,7 @@
 
 **Logs:**
 - Console output only (echo statements to stdout)
-- MegaSync transfer list for rename event verification (referenced in `remote/rename-remote-files-2-rename-local.zsh` comments)
+- MegaSync transfer list for rename event verification (referenced in `dev/remote/rename-remote-files-2-rename-local.zsh` comments)
 
 ## CI/CD & Deployment
 
@@ -64,8 +64,8 @@
 **Configuration Files:**
 - `~/.config/rclone/rclone.conf` - rclone remote configuration (MEGA credentials managed here)
 - `~/.config/MegaSync/` - MegaSync client sync folder path configuration
-- rclone remote name: `mega` (hardcoded in `remote/rename-remote-files-1-match-remote.zsh:6`)
-- rclone path: `devicesync/2019` (hardcoded in `remote/rename-remote-files-1-match-remote.zsh:7`)
+- rclone remote name: `mega` (hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh:6`)
+- rclone path: `devicesync/2019` (hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh:7`)
 
 **Secrets location:**
 - MEGA authentication credentials stored in rclone config: `~/.config/rclone/rclone.conf`
@@ -78,14 +78,14 @@
 
 **Outgoing:**
 - File rename events trigger MegaSync sync updates (implicit; relies on OS filesystem watch)
-  - `mv` command in `remote/rename-remote-files-2-rename-local.zsh` triggers MegaSync rename detection
+  - `mv` command in `dev/remote/rename-remote-files-2-rename-local.zsh` triggers MegaSync rename detection
   - MegaSync handles upload of metadata changes back to MEGA servers
 
 ## Data Flow
 
 **Primary Integration Path (File Sync Workflow):**
 
-1. `remote/rename-remote-files-1-match-remote.zsh`:
+1. `dev/remote/rename-remote-files-1-match-remote.zsh`:
    - Calls `rclone lsjson --recursive mega:devicesync/2019` 
    - Fetches JSON manifest, pipes through jq to extract Size and Path
    - Builds size-based lookup map in memory
@@ -95,7 +95,7 @@
    - Writes matching info to `.txt` files preserving local directory structure
    - Stores: `ORIGINAL_LOCAL_PATH`, `MATCHED_REMOTE_PATH`, `FILE_SIZE_BYTES`, `PROCESSED_AT`
 
-3. `remote/rename-remote-files-2-rename-local.zsh`:
+3. `dev/remote/rename-remote-files-2-rename-local.zsh`:
    - Sources shadow `.txt` files to read metadata
    - Moves files back to original paths (triggers MegaSync sync)
    - MegaSync detects file rename event and syncs metadata to MEGA servers

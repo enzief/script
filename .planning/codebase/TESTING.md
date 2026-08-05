@@ -73,7 +73,7 @@
 **Pattern 1: Test Script Exit Codes**
 ```bash
 # Test number-pages with invalid chapter
-./manga/number-pages.zsh -n abc nonexistent_dir 2>/dev/null
+./dev/manga/number-pages.zsh -n abc nonexistent_dir 2>/dev/null
 if [[ $? -eq 1 ]]; then
     echo "PASS: Rejects invalid start page"
 else
@@ -84,7 +84,7 @@ fi
 **Pattern 2: Test Argument Validation**
 ```bash
 # Test list-missing-pages with missing arguments
-./local-filesys/list-missing-pages.zsh 2>&1 | grep -q "Usage:"
+./dev/local-filesys/list-missing-pages.zsh 2>&1 | grep -q "Usage:"
 if [[ $? -eq 0 ]]; then
     echo "PASS: Shows usage on missing args"
 else
@@ -96,7 +96,7 @@ fi
 ```bash
 # Create temporary directory for test
 tmpdir=$(mktemp -d)
-./manga/number-pages.zsh -n 1 "$tmpdir" test_chapter
+./dev/manga/number-pages.zsh -n 1 "$tmpdir" test_chapter
 
 # Verify output files exist
 if [[ -f "$tmpdir/001_01.jpg" ]]; then
@@ -275,7 +275,7 @@ mkdir -p "$tmpdir"
 touch "$tmpdir/test1.jpg" "$tmpdir/test2.jpg"
 
 # Run script
-./manga/number-pages.zsh -n 1 "$tmpdir" 99
+./dev/manga/number-pages.zsh -n 1 "$tmpdir" 99
 
 # Verify output
 expected_files=("$tmpdir/099_01.jpg" "$tmpdir/099_02.jpg")
@@ -292,11 +292,11 @@ rm -rf "$tmpdir"
 **Example: Testing argument validation**
 ```bash
 # Should reject non-numeric chapter
-./manga/number-pages.zsh -c abc . 2>&1 | grep -q "Error"
+./dev/manga/number-pages.zsh -c abc . 2>&1 | grep -q "Error"
 [[ $? -eq 0 ]] && echo "PASS" || echo "FAIL"
 
 # Should show help
-./manga/number-pages.zsh -h 2>&1 | grep -q "Usage"
+./dev/manga/number-pages.zsh -h 2>&1 | grep -q "Usage"
 [[ $? -eq 0 ]] && echo "PASS" || echo "FAIL"
 ```
 

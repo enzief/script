@@ -169,12 +169,12 @@
 7. Output/summary
 
 **File Locations:**
-- `manga/` - Image file operations (`number-pages.zsh`)
-- `local-filesys/` - Local filesystem utilities and shadow mapping:
+- `dev/manga/` - Image file operations (`number-pages.zsh`)
+- `dev/local-filesys/` - Local filesystem utilities and shadow mapping:
   - `list-missing-pages.zsh` - Compare two directories
   - `retain-dir-struct-*.zsh` - Shadow map operations (3 variants)
   - `rotate` - Simple image rotation utility
-- `remote/` - Remote file synchronization:
+- `dev/remote/` - Remote file synchronization:
   - `rename-remote-files-1-match-remote.zsh` - Match local to remote by size
   - `rename-remote-files-2-rename-local.zsh` - Revert files based on shadow metadata
 

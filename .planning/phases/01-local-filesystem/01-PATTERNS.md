@@ -8,15 +8,15 @@
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |--------------------|------|-----------|-----------------|----------------|
-| `local-filesys/retain-dir-struct-2-sorted.zsh` | utility (file sync) | CRUD / file-I/O | itself, lines 22-28 (working process-substitution loop) | exact (self-analog) |
-| `local-filesys/retain-dir-struct-3-find-sorted.zsh` | utility (diagnostic/lookup) | file-I/O | `retain-dir-struct-2-sorted.zsh` lines 22-28 | role-match |
-| `local-filesys/retain-dir-struct-1.zsh` | utility (indexing) | file-I/O | `retain-dir-struct-3-find-sorted.zsh` (print-only output style) | role-match |
-| `local-filesys/retain-dir-struct-2-sorted.zsh` (`--dry-run` flag addition) | utility (CLI flag parsing) | request-response (CLI args) | `manga/number-pages.zsh` lines 1-4 (`zparseopts`) | role-match |
-| `local-filesys/tests/*.zsh` (new) | test | batch (fixture-driven assertions) | none in repo — no existing test framework or file | no analog (greenfield) |
+| `dev/local-filesys/retain-dir-struct-2-sorted.zsh` | utility (file sync) | CRUD / file-I/O | itself, lines 22-28 (working process-substitution loop) | exact (self-analog) |
+| `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` | utility (diagnostic/lookup) | file-I/O | `retain-dir-struct-2-sorted.zsh` lines 22-28 | role-match |
+| `dev/local-filesys/retain-dir-struct-1.zsh` | utility (indexing) | file-I/O | `retain-dir-struct-3-find-sorted.zsh` (print-only output style) | role-match |
+| `dev/local-filesys/retain-dir-struct-2-sorted.zsh` (`--dry-run` flag addition) | utility (CLI flag parsing) | request-response (CLI args) | `dev/manga/number-pages.zsh` lines 1-4 (`zparseopts`) | role-match |
+| `dev/local-filesys/tests/*.zsh` (new) | test | batch (fixture-driven assertions) | none in repo — no existing test framework or file | no analog (greenfield) |
 
 ## Pattern Assignments
 
-### `local-filesys/retain-dir-struct-2-sorted.zsh` — fix second loop's subshell bug (D-01)
+### `dev/local-filesys/retain-dir-struct-2-sorted.zsh` — fix second loop's subshell bug (D-01)
 
 **Analog:** same file, first loop (lines 22-28) — already works correctly via process substitution.
 
@@ -70,7 +70,7 @@ done
 
 ---
 
-### `local-filesys/retain-dir-struct-3-find-sorted.zsh` — fix lookup loop's subshell bug (D-02)
+### `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` — fix lookup loop's subshell bug (D-02)
 
 **Analog:** `retain-dir-struct-2-sorted.zsh` lines 22-28 (process-substitution pattern, per CONTEXT.md D-Claude's Discretion).
 
@@ -116,7 +116,7 @@ Note: these two lines use `echo` for the error message despite the rest of the f
 
 ---
 
-### `local-filesys/retain-dir-struct-1.zsh` — output style only (D-03)
+### `dev/local-filesys/retain-dir-struct-1.zsh` — output style only (D-03)
 
 **Analog:** `retain-dir-struct-3-find-sorted.zsh` (fully `print`-based) as the target style.
 
@@ -135,11 +135,11 @@ Convert all `echo` → `print`, keeping line 32's existing `print "Hashing: $rel
 
 ---
 
-### `local-filesys/retain-dir-struct-2-sorted.zsh` — add `--dry-run` flag (D-04)
+### `dev/local-filesys/retain-dir-struct-2-sorted.zsh` — add `--dry-run` flag (D-04)
 
-**Analog:** `manga/number-pages.zsh` lines 1-4 (only script in repo using `zparseopts` for flags).
+**Analog:** `dev/manga/number-pages.zsh` lines 1-4 (only script in repo using `zparseopts` for flags).
 
-**Flag-parsing pattern** (`manga/number-pages.zsh` lines 1-4):
+**Flag-parsing pattern** (`dev/manga/number-pages.zsh` lines 1-4):
 ```zsh
 #!/bin/zsh
 
@@ -164,20 +164,20 @@ Then guard the `cp` call (line 49) with `if (( DRY_RUN )); then print "Would cop
 
 ---
 
-### `local-filesys/tests/*.zsh` (new test file) — greenfield, no analog
+### `dev/local-filesys/tests/*.zsh` (new test file) — greenfield, no analog
 
 **No existing test file or framework found in the repository.** Confirmed via `find` (no `*.bats`, `*test*` files besides `.planning/codebase/TESTING.md`, a documentation file, not a test) and `command -v bats` (not installed on this machine).
 
 **TESTING.md recommendation** (`.planning/codebase/TESTING.md`, "Recommended Testing Framework" section) lists three options: BATS, ShUnit2, or manual assert-based zsh script. Given CONTEXT.md D-06 ("no CI service, tests run locally on demand") and the project's "lightweight" constraint, and that `bats` is **not installed** on this machine, **Option 3 (manual assert-based zsh script) is the pragmatic default** unless the user confirms bats is available/installable — a bats-based test would introduce a new external dependency (`bats-core`) that nothing else in this repo requires (see `## Key Dependencies` — no test-runner listed).
 
 **Suggested location/naming** (per TESTING.md's own "If Tests Were to Be Added" guidance, which the planner should follow since it's the only existing convention on this topic):
-- Location: `tests/` directory at repo root, OR co-located under `local-filesys/`
+- Location: `tests/` directory at repo root, OR co-located under `dev/local-filesys/`
 - Naming: `test-retain-dir-struct-2-sorted.zsh`, `test-retain-dir-struct-3-find-sorted.zsh` (or one combined `test-local-filesys.zsh`)
 
 **Manual assert pattern to follow** (from TESTING.md's own example patterns, lines ~68-80, already written in this repo's docs as the intended style):
 ```bash
 # Test argument validation
-./local-filesys/retain-dir-struct-3-find-sorted.zsh 2>&1 | grep -q "Usage:"
+./dev/local-filesys/retain-dir-struct-3-find-sorted.zsh 2>&1 | grep -q "Usage:"
 if [[ $? -eq 0 ]]; then
     echo "PASS: Shows usage on missing args"
 else
@@ -197,7 +197,7 @@ Extend this shape for the phase's actual requirements (D-05): build small scratc
 ## Shared Patterns
 
 ### Safe subshell-free iteration (process substitution)
-**Source:** `local-filesys/retain-dir-struct-2-sorted.zsh` lines 22-28
+**Source:** `dev/local-filesys/retain-dir-struct-2-sorted.zsh` lines 22-28
 **Apply to:** the two buggy loops (script 2's second loop, script 3's lookup loop)
 ```zsh
 while IFS= read -r -d '' var; do
@@ -206,29 +206,29 @@ done < <(find "$DIR" -type f ... -print0)
 ```
 
 ### Print-only output (D-03 standardization)
-**Source:** `local-filesys/retain-dir-struct-3-find-sorted.zsh` (already fully `print`-based)
+**Source:** `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` (already fully `print`-based)
 **Apply to:** all `echo` call sites in scripts 1 and 2, and the two `echo` error lines in script 3 (lines 13-14)
 
 ### Associative array declaration
-**Source:** `local-filesys/retain-dir-struct-2-sorted.zsh` line 19, `retain-dir-struct-3-find-sorted.zsh` line 22
+**Source:** `dev/local-filesys/retain-dir-struct-2-sorted.zsh` line 19, `retain-dir-struct-3-find-sorted.zsh` line 22
 **Apply to:** no new arrays needed this phase — existing `shadow_map`/`file_map` declarations are unchanged, only their consuming loops move.
 ```zsh
 declare -A shadow_map
 ```
 
 ### CLI flag parsing (for `--dry-run`)
-**Source:** `manga/number-pages.zsh` lines 1-4, ~49-50
-**Apply to:** `local-filesys/retain-dir-struct-2-sorted.zsh` only (the only file in this phase gaining a new flag)
+**Source:** `dev/manga/number-pages.zsh` lines 1-4, ~49-50
+**Apply to:** `dev/local-filesys/retain-dir-struct-2-sorted.zsh` only (the only file in this phase gaining a new flag)
 
 ## No Analog Found
 
 | File | Role | Data Flow | Reason |
 |------|------|-----------|--------|
-| `local-filesys/tests/*.zsh` (new) | test | batch/fixture-driven | No test framework or test file exists anywhere in the repo; `bats` not installed on this machine. Planner should follow `.planning/codebase/TESTING.md`'s own "Option 3: Manual + assert script" guidance rather than a codebase analog. |
+| `dev/local-filesys/tests/*.zsh` (new) | test | batch/fixture-driven | No test framework or test file exists anywhere in the repo; `bats` not installed on this machine. Planner should follow `.planning/codebase/TESTING.md`'s own "Option 3: Manual + assert script" guidance rather than a codebase analog. |
 
 ## Metadata
 
-**Analog search scope:** `local-filesys/`, `manga/`, `remote/`, `.planning/codebase/`
-**Files scanned:** `retain-dir-struct-1.zsh`, `retain-dir-struct-2-sorted.zsh`, `retain-dir-struct-3-find-sorted.zsh`, `manga/number-pages.zsh`, `.planning/codebase/TESTING.md`, `.planning/codebase/CONVENTIONS.md` (referenced, not re-read — already summarized in CLAUDE.md)
+**Analog search scope:** `dev/local-filesys/`, `dev/manga/`, `dev/remote/`, `.planning/codebase/`
+**Files scanned:** `retain-dir-struct-1.zsh`, `retain-dir-struct-2-sorted.zsh`, `retain-dir-struct-3-find-sorted.zsh`, `dev/manga/number-pages.zsh`, `.planning/codebase/TESTING.md`, `.planning/codebase/CONVENTIONS.md` (referenced, not re-read — already summarized in CLAUDE.md)
 **Pattern extraction date:** 2026-08-05
 </content>

@@ -35,8 +35,8 @@
 **External Tools:**
 - `rclone` (remote file sync) - Cloud storage abstraction layer for MEGA integration (`rclone lsjson`, `rclone` remote named "mega")
 - `jq` (JSON processor) - JSON parsing for `rclone lsjson` output
-- `ImageMagick` (identify command) - Image dimension detection in `manga/number-pages.zsh`
-- `convert` (ImageMagick) - Image rotation utility in `local-filesys/rotate`
+- `ImageMagick` (identify command) - Image dimension detection in `dev/manga/number-pages.zsh`
+- `convert` (ImageMagick) - Image rotation utility in `dev/local-filesys/rotate`
 
 **Standard POSIX Utilities:**
 - `grep` (pattern matching, with Perl regex via `-oP` flag)
@@ -48,7 +48,7 @@
 ## Configuration
 
 **Environment:**
-- rclone remote "mega" with path "devicesync/2019" configured in rclone config (referenced in `remote/rename-remote-files-1-match-remote.zsh`)
+- rclone remote "mega" with path "devicesync/2019" configured in rclone config (referenced in `dev/remote/rename-remote-files-1-match-remote.zsh`)
 - No `.env` files or environment variable configuration detected
 - MEGA sync folder path passed as runtime argument to scripts
 

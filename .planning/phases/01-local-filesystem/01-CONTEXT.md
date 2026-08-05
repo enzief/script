@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Fix three subshell variable-scope bugs and standardize output-command style across the `local-filesys/retain-dir-struct-*.zsh` scripts, so shadow-map hash lookups actually succeed instead of silently returning empty. Requirements: LOCALFS-01, LOCALFS-02, LOCALFS-03.
+Fix three subshell variable-scope bugs and standardize output-command style across the `dev/local-filesys/retain-dir-struct-*.zsh` scripts, so shadow-map hash lookups actually succeed instead of silently returning empty. Requirements: LOCALFS-01, LOCALFS-02, LOCALFS-03.
 
 </domain>
 
@@ -59,7 +59,7 @@ Fix three subshell variable-scope bugs and standardize output-command style acro
 - `retain-dir-struct-2-sorted.zsh` lines 22-28 — working process-substitution pattern (`while ... done < <(find ... -print0)`) already used for the first indexing loop; reuse this pattern to fix the second loop's subshell bug rather than introducing a new mechanism (e.g. temp files).
 
 ### Established Patterns
-- Safe file iteration: `find ... -print0 | while IFS= read -r -d '' var; do ... done` (or the process-substitution variant to avoid subshells) — used consistently across `local-filesys/*.zsh`.
+- Safe file iteration: `find ... -print0 | while IFS= read -r -d '' var; do ... done` (or the process-substitution variant to avoid subshells) — used consistently across `dev/local-filesys/*.zsh`.
 - Associative arrays declared with `declare -A`, named descriptively (`shadow_map`, `file_map`).
 - Argument validation and usage messages at the top of each script, before main logic.
 - Errors go to stderr with `>&2`, exit code 1.

@@ -43,8 +43,8 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 - `stat` (GNU coreutils) - File size retrieval and metadata
 - `rclone` (remote file sync) - Cloud storage abstraction layer for MEGA integration (`rclone lsjson`, `rclone` remote named "mega")
 - `jq` (JSON processor) - JSON parsing for `rclone lsjson` output
-- `ImageMagick` (identify command) - Image dimension detection in `manga/number-pages.zsh`
-- `convert` (ImageMagick) - Image rotation utility in `local-filesys/rotate`
+- `ImageMagick` (identify command) - Image dimension detection in `dev/manga/number-pages.zsh`
+- `convert` (ImageMagick) - Image rotation utility in `dev/local-filesys/rotate`
 - `grep` (pattern matching, with Perl regex via `-oP` flag)
 - `awk` (text field extraction)
 - `date` (timestamp generation)
@@ -53,7 +53,7 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 
 ## Configuration
 
-- rclone remote "mega" with path "devicesync/2019" configured in rclone config (referenced in `remote/rename-remote-files-1-match-remote.zsh`)
+- rclone remote "mega" with path "devicesync/2019" configured in rclone config (referenced in `dev/remote/rename-remote-files-1-match-remote.zsh`)
 - No `.env` files or environment variable configuration detected
 - MEGA sync folder path passed as runtime argument to scripts
 - No build configuration files detected (package.json, Makefile, cargo.toml, etc.)
@@ -164,9 +164,9 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 - Each `.zsh` file is an executable script
 - Invoked from command line with arguments
 - No sourcing of shared libraries observed
-- `manga/` - Image file operations (`number-pages.zsh`)
-- `local-filesys/` - Local filesystem utilities and shadow mapping:
-- `remote/` - Remote file synchronization:
+- `dev/manga/` - Image file operations (`number-pages.zsh`)
+- `dev/local-filesys/` - Local filesystem utilities and shadow mapping:
+- `dev/remote/` - Remote file synchronization:
 
 ## Variable Expansion & Quoting
 
@@ -213,12 +213,12 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| Manga Numbering | Rename image files to sequential page numbers with double-page support | `manga/number-pages.zsh` |
-| Local FS Indexing | Create hash-based shadow maps of directory structures | `local-filesys/retain-dir-struct-1.zsh` |
-| Shadow Synchronization | Sync shadow files to new directory structures by hash matching | `local-filesys/retain-dir-struct-2-sorted.zsh` |
-| File Mapping | Map shadow files back to original files using hash lookups | `local-filesys/retain-dir-struct-3-find-sorted.zsh` |
-| Remote Matching | Match local files to remote files by size and create sync structure | `remote/rename-remote-files-1-match-remote.zsh` |
-| Remote Reversion | Move files back from sync folder to original locations, triggering remote renames | `remote/rename-remote-files-2-rename-local.zsh` |
+| Manga Numbering | Rename image files to sequential page numbers with double-page support | `dev/manga/number-pages.zsh` |
+| Local FS Indexing | Create hash-based shadow maps of directory structures | `dev/local-filesys/retain-dir-struct-1.zsh` |
+| Shadow Synchronization | Sync shadow files to new directory structures by hash matching | `dev/local-filesys/retain-dir-struct-2-sorted.zsh` |
+| File Mapping | Map shadow files back to original files using hash lookups | `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` |
+| Remote Matching | Match local files to remote files by size and create sync structure | `dev/remote/rename-remote-files-1-match-remote.zsh` |
+| Remote Reversion | Move files back from sync folder to original locations, triggering remote renames | `dev/remote/rename-remote-files-2-rename-local.zsh` |
 
 ## Pattern Overview
 
@@ -265,7 +265,7 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 ## Key Abstractions
 
 - Purpose: Create a parallel directory structure with metadata pointers instead of real files
-- Examples: `local-filesys/retain-dir-struct-1.zsh`, `remote/rename-remote-files-1-match-remote.zsh`
+- Examples: `dev/local-filesys/retain-dir-struct-1.zsh`, `dev/remote/rename-remote-files-1-match-remote.zsh`
 - Pattern: For each file in source, create `.txt` file at corresponding path in shadow directory containing file hash or remote metadata
 - Implementation: `echo "hash content" > "$TGTDIR/${relpath}.txt"`
 - Purpose: Enable O(1) file matching without repeated I/O operations
@@ -277,28 +277,28 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 - Pattern: Stage 1 renames to temporary files (`.numbering_tmp_*`), Stage 2 renames to final names
 - Implementation: 
 - Purpose: Preserve filesystem structure while reorganizing or staging files
-- Examples: `local-filesys/retain-dir-struct-2-sorted.zsh` creates new shadow structure matching reorganized data
+- Examples: `dev/local-filesys/retain-dir-struct-2-sorted.zsh` creates new shadow structure matching reorganized data
 - Pattern: Extract relative path from source, apply to target: `target_path="${target_root}/${relpath}"`
 - Implementation: `mkdir -p "$(dirname "$target_shadow_path")"` then `cp ... "$target_shadow_path"`
 
 ## Entry Points
 
-- Location: `/home/enzief/work/iswi/script/manga/number-pages.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/manga/number-pages.zsh`
 - Triggers: Manual invocation with directory and chapter arguments
 - Responsibilities: Parse image files, detect double-page spreads, calculate sequential page numbers, rename files with smart padding
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-1.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-1.zsh`
 - Triggers: Manual invocation with source and target directory paths
 - Responsibilities: Initial shadow map creation; walk filesystem and hash all files
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-2-sorted.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-2-sorted.zsh`
 - Triggers: Manual invocation after reorganizing data; requires existing shadow from retain-dir-struct-1
 - Responsibilities: Sync shadow files to new directory structure; match by hash; preserve metadata
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-3-find-sorted.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-3-find-sorted.zsh`
 - Triggers: Manual invocation with shadow directory and original data directory
 - Responsibilities: Read-only diagnostic; map shadow files back to original files; output mappings for verification
-- Location: `/home/enzief/work/iswi/script/remote/rename-remote-files-1-match-remote.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/remote/rename-remote-files-1-match-remote.zsh`
 - Triggers: Manual invocation with local source, shadow output, and sync output directories
 - Responsibilities: Fetch remote manifest, match local files by size, create shadow metadata, stage files in sync directory
-- Location: `/home/enzief/work/iswi/script/remote/rename-remote-files-2-rename-local.zsh`
+- Location: `/home/enzief/work/iswi/script/dev/remote/rename-remote-files-2-rename-local.zsh`
 - Triggers: Manual invocation after MEGA sync confirms changes; requires shadow from rename-remote-files-1
 - Responsibilities: Revert files from sync to original locations; trigger rename events on remote
 

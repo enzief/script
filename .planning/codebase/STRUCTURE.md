@@ -6,15 +6,15 @@
 
 ```
 script/
-├── manga/                                    # Manga page numbering utilities
+├── dev/manga/                                    # Manga page numbering utilities
 │   └── number-pages.zsh                      # Rename images to sequential page numbers
 │
-├── local-filesys/                            # Local filesystem operations
+├── dev/local-filesys/                            # Local filesystem operations
 │   ├── retain-dir-struct-1.zsh               # Stage 1: Create shadow map (hash-based)
 │   ├── retain-dir-struct-2-sorted.zsh        # Stage 2: Sync shadow files to new structure
 │   └── retain-dir-struct-3-find-sorted.zsh   # Stage 3: Map shadow files back to originals
 │
-├── remote/                                   # Remote file synchronization (MEGA)
+├── dev/remote/                                   # Remote file synchronization (MEGA)
 │   ├── rename-remote-files-1-match-remote.zsh      # Stage 1: Match local to remote, create sync
 │   └── rename-remote-files-2-rename-local.zsh      # Stage 2: Revert files, trigger renames
 │
@@ -26,17 +26,17 @@ script/
 
 ## Directory Purposes
 
-**`manga/`:**
+**`dev/manga/`:**
 - Purpose: Manga image processing and sequential numbering
 - Contains: zsh scripts for renaming image files in manga chapters
 - Key files: `number-pages.zsh`
 
-**`local-filesys/`:**
+**`dev/local-filesys/`:**
 - Purpose: Local filesystem indexing, hashing, and reorganization workflows
 - Contains: Three-stage pipeline for creating and maintaining shadow maps (hash-based file metadata)
 - Key files: `retain-dir-struct-1.zsh` (index), `retain-dir-struct-2-sorted.zsh` (sync), `retain-dir-struct-3-find-sorted.zsh` (verify)
 
-**`remote/`:**
+**`dev/remote/`:**
 - Purpose: Remote file synchronization with MEGA cloud storage
 - Contains: Two-stage pipeline for matching, staging, and reverting files
 - Key files: `rename-remote-files-1-match-remote.zsh` (match), `rename-remote-files-2-rename-local.zsh` (revert)
@@ -50,18 +50,18 @@ script/
 ## Key File Locations
 
 **Entry Points:**
-- `manga/number-pages.zsh`: Main manga numbering script
-- `local-filesys/retain-dir-struct-1.zsh`: Local FS indexing start
-- `remote/rename-remote-files-1-match-remote.zsh`: Remote sync start
+- `dev/manga/number-pages.zsh`: Main manga numbering script
+- `dev/local-filesys/retain-dir-struct-1.zsh`: Local FS indexing start
+- `dev/remote/rename-remote-files-1-match-remote.zsh`: Remote sync start
 
 **Configuration:**
 - No dedicated config files; all scripts use command-line arguments
-- Hardcoded config in `remote/rename-remote-files-1-match-remote.zsh` (lines 5-6): `REMOTE_NAME="mega"`, `REMOTE_PATH="devicesync/2019"`
+- Hardcoded config in `dev/remote/rename-remote-files-1-match-remote.zsh` (lines 5-6): `REMOTE_NAME="mega"`, `REMOTE_PATH="devicesync/2019"`
 
 **Core Logic:**
-- Manga: `manga/number-pages.zsh` lines 79-145 (main algorithm: image dimension detection, page numbering, renaming)
-- Local FS: `local-filesys/retain-dir-struct-1.zsh` lines 17-35 (main loop: find files, calculate hash, write shadow)
-- Remote: `remote/rename-remote-files-1-match-remote.zsh` lines 24-70 (main loop: match by size, create shadow, move to sync)
+- Manga: `dev/manga/number-pages.zsh` lines 79-145 (main algorithm: image dimension detection, page numbering, renaming)
+- Local FS: `dev/local-filesys/retain-dir-struct-1.zsh` lines 17-35 (main loop: find files, calculate hash, write shadow)
+- Remote: `dev/remote/rename-remote-files-1-match-remote.zsh` lines 24-70 (main loop: match by size, create shadow, move to sync)
 
 **Utilities:**
 - No dedicated utility scripts; all logic embedded in domain-specific scripts
@@ -79,7 +79,7 @@ script/
 
 **Directories:**
 - Format: `<domain>/` (singular or plural noun)
-- Examples: `manga/`, `local-filesys/`, `remote/`, `.planning/`
+- Examples: `dev/manga/`, `dev/local-filesys/`, `dev/remote/`, `.planning/`
 - Pattern: Lowercase, hyphen-separated for multi-word names
 
 **Variables:**
@@ -97,9 +97,9 @@ script/
 
 **New Feature (Domain-Specific):**
 1. Create new `.zsh` file in appropriate directory:
-   - Manga-related: `manga/<action>.zsh`
-   - Local FS-related: `local-filesys/<action>.zsh`
-   - Remote-related: `remote/<action>.zsh`
+   - Manga-related: `dev/manga/<action>.zsh`
+   - Local FS-related: `dev/local-filesys/<action>.zsh`
+   - Remote-related: `dev/remote/<action>.zsh`
 2. Follow naming convention: `<action>[-<variant>][-<descriptor>].zsh`
 3. Include usage help block at top (see `number-pages.zsh` lines 7-44 for pattern)
 4. Add argument parsing via `zparseopts` (see `number-pages.zsh` lines 4-5)
@@ -141,17 +141,17 @@ script/
 ## File Groupings by Purpose
 
 **Metadata Creation (Stage 1 scripts):**
-- `local-filesys/retain-dir-struct-1.zsh` - Creates shadow map from source
-- `remote/rename-remote-files-1-match-remote.zsh` - Creates shadow map and sync structure
+- `dev/local-filesys/retain-dir-struct-1.zsh` - Creates shadow map from source
+- `dev/remote/rename-remote-files-1-match-remote.zsh` - Creates shadow map and sync structure
 
 **Metadata Application (Stage 2+ scripts):**
-- `local-filesys/retain-dir-struct-2-sorted.zsh` - Uses shadow map to sync new structure
-- `local-filesys/retain-dir-struct-3-find-sorted.zsh` - Uses shadow map to verify/map files
-- `remote/rename-remote-files-2-rename-local.zsh` - Uses shadow map to revert files
+- `dev/local-filesys/retain-dir-struct-2-sorted.zsh` - Uses shadow map to sync new structure
+- `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` - Uses shadow map to verify/map files
+- `dev/remote/rename-remote-files-2-rename-local.zsh` - Uses shadow map to revert files
 
 **Standalone Operations:**
-- `manga/number-pages.zsh` - Complete operation (no multi-stage dependency)
-- `local-filesys/list-missing-pages.zsh` - Comparison utility (no dependencies)
+- `dev/manga/number-pages.zsh` - Complete operation (no multi-stage dependency)
+- `dev/local-filesys/list-missing-pages.zsh` - Comparison utility (no dependencies)
 
 ## Dependencies & Import Relationships
 

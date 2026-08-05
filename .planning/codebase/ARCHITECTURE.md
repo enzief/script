@@ -9,7 +9,7 @@
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           Entry Points                                    │
 │  Manga Renaming  │  Filesystem Indexing  │  Remote Sync Management       │
-│ `manga/*.zsh`    │  `local-filesys/*.zsh` │  `remote/*.zsh`              │
+│ `dev/manga/*.zsh`    │  `dev/local-filesys/*.zsh` │  `dev/remote/*.zsh`              │
 └────────┬─────────┴───────────┬────────────┴─────────────┬────────────────┘
          │                     │                          │
          ▼                     ▼                          ▼
@@ -40,12 +40,12 @@
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| Manga Numbering | Rename image files to sequential page numbers with double-page support | `manga/number-pages.zsh` |
-| Local FS Indexing | Create hash-based shadow maps of directory structures | `local-filesys/retain-dir-struct-1.zsh` |
-| Shadow Synchronization | Sync shadow files to new directory structures by hash matching | `local-filesys/retain-dir-struct-2-sorted.zsh` |
-| File Mapping | Map shadow files back to original files using hash lookups | `local-filesys/retain-dir-struct-3-find-sorted.zsh` |
-| Remote Matching | Match local files to remote files by size and create sync structure | `remote/rename-remote-files-1-match-remote.zsh` |
-| Remote Reversion | Move files back from sync folder to original locations, triggering remote renames | `remote/rename-remote-files-2-rename-local.zsh` |
+| Manga Numbering | Rename image files to sequential page numbers with double-page support | `dev/manga/number-pages.zsh` |
+| Local FS Indexing | Create hash-based shadow maps of directory structures | `dev/local-filesys/retain-dir-struct-1.zsh` |
+| Shadow Synchronization | Sync shadow files to new directory structures by hash matching | `dev/local-filesys/retain-dir-struct-2-sorted.zsh` |
+| File Mapping | Map shadow files back to original files using hash lookups | `dev/local-filesys/retain-dir-struct-3-find-sorted.zsh` |
+| Remote Matching | Match local files to remote files by size and create sync structure | `dev/remote/rename-remote-files-1-match-remote.zsh` |
+| Remote Reversion | Move files back from sync folder to original locations, triggering remote renames | `dev/remote/rename-remote-files-2-rename-local.zsh` |
 
 ## Pattern Overview
 
@@ -149,7 +149,7 @@
 
 **Shadow Map:**
 - Purpose: Create a parallel directory structure with metadata pointers instead of real files
-- Examples: `local-filesys/retain-dir-struct-1.zsh`, `remote/rename-remote-files-1-match-remote.zsh`
+- Examples: `dev/local-filesys/retain-dir-struct-1.zsh`, `dev/remote/rename-remote-files-1-match-remote.zsh`
 - Pattern: For each file in source, create `.txt` file at corresponding path in shadow directory containing file hash or remote metadata
 - Implementation: `echo "hash content" > "$TGTDIR/${relpath}.txt"`
 
@@ -173,39 +173,39 @@
 
 **Parallel Directory Mirroring:**
 - Purpose: Preserve filesystem structure while reorganizing or staging files
-- Examples: `local-filesys/retain-dir-struct-2-sorted.zsh` creates new shadow structure matching reorganized data
+- Examples: `dev/local-filesys/retain-dir-struct-2-sorted.zsh` creates new shadow structure matching reorganized data
 - Pattern: Extract relative path from source, apply to target: `target_path="${target_root}/${relpath}"`
 - Implementation: `mkdir -p "$(dirname "$target_shadow_path")"` then `cp ... "$target_shadow_path"`
 
 ## Entry Points
 
-**`manga/number-pages.zsh`:**
-- Location: `/home/enzief/work/iswi/script/manga/number-pages.zsh`
+**`dev/manga/number-pages.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/manga/number-pages.zsh`
 - Triggers: Manual invocation with directory and chapter arguments
 - Responsibilities: Parse image files, detect double-page spreads, calculate sequential page numbers, rename files with smart padding
 
-**`local-filesys/retain-dir-struct-1.zsh`:**
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-1.zsh`
+**`dev/local-filesys/retain-dir-struct-1.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-1.zsh`
 - Triggers: Manual invocation with source and target directory paths
 - Responsibilities: Initial shadow map creation; walk filesystem and hash all files
 
-**`local-filesys/retain-dir-struct-2-sorted.zsh`:**
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-2-sorted.zsh`
+**`dev/local-filesys/retain-dir-struct-2-sorted.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-2-sorted.zsh`
 - Triggers: Manual invocation after reorganizing data; requires existing shadow from retain-dir-struct-1
 - Responsibilities: Sync shadow files to new directory structure; match by hash; preserve metadata
 
-**`local-filesys/retain-dir-struct-3-find-sorted.zsh`:**
-- Location: `/home/enzief/work/iswi/script/local-filesys/retain-dir-struct-3-find-sorted.zsh`
+**`dev/local-filesys/retain-dir-struct-3-find-sorted.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/local-filesys/retain-dir-struct-3-find-sorted.zsh`
 - Triggers: Manual invocation with shadow directory and original data directory
 - Responsibilities: Read-only diagnostic; map shadow files back to original files; output mappings for verification
 
-**`remote/rename-remote-files-1-match-remote.zsh`:**
-- Location: `/home/enzief/work/iswi/script/remote/rename-remote-files-1-match-remote.zsh`
+**`dev/remote/rename-remote-files-1-match-remote.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/remote/rename-remote-files-1-match-remote.zsh`
 - Triggers: Manual invocation with local source, shadow output, and sync output directories
 - Responsibilities: Fetch remote manifest, match local files by size, create shadow metadata, stage files in sync directory
 
-**`remote/rename-remote-files-2-rename-local.zsh`:**
-- Location: `/home/enzief/work/iswi/script/remote/rename-remote-files-2-rename-local.zsh`
+**`dev/remote/rename-remote-files-2-rename-local.zsh`:**
+- Location: `/home/enzief/work/iswi/script/dev/remote/rename-remote-files-2-rename-local.zsh`
 - Triggers: Manual invocation after MEGA sync confirms changes; requires shadow from rename-remote-files-1
 - Responsibilities: Revert files from sync to original locations; trigger rename events on remote
 
@@ -228,7 +228,7 @@
 
 ### Hardcoded Remote Configuration
 
-**What happens:** Remote name "mega" and path "devicesync/2019" are hardcoded in `remote/rename-remote-files-1-match-remote.zsh` (lines 5-6), making the script non-configurable.
+**What happens:** Remote name "mega" and path "devicesync/2019" are hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh` (lines 5-6), making the script non-configurable.
 
 **Why it's wrong:** Different users or projects need different remote names and paths. Hardcoding forces script modification or script duplication.
 
@@ -236,7 +236,7 @@
 
 ### Size-Based Matching for Remote Files
 
-**What happens:** `remote/rename-remote-files-1-match-remote.zsh` matches local files to remote by file size alone (line 43: `remote_map[$local_size]`). The comment acknowledges risk: "If you have many files with identical sizes, this could lead to collisions."
+**What happens:** `dev/remote/rename-remote-files-1-match-remote.zsh` matches local files to remote by file size alone (line 43: `remote_map[$local_size]`). The comment acknowledges risk: "If you have many files with identical sizes, this could lead to collisions."
 
 **Why it's wrong:** Collisions cause incorrect file mappings, leading to renamed files being reverted to wrong locations. No collision detection or fallback exists.
 
@@ -244,7 +244,7 @@
 
 ### No Dependency Validation
 
-**What happens:** `remote/rename-remote-files-1-match-remote.zsh` requires `rclone` and `jq` (lines 22, 33) but doesn't validate they exist before using them.
+**What happens:** `dev/remote/rename-remote-files-1-match-remote.zsh` requires `rclone` and `jq` (lines 22, 33) but doesn't validate they exist before using them.
 
 **Why it's wrong:** Scripts fail with confusing errors (command not found) rather than clear dependency messages.
 
