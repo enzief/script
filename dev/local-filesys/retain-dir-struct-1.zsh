@@ -9,6 +9,9 @@ fi
 SRCDIR=${1%/}  # Remove trailing slash
 TGTDIR=${2%/}
 
+# Validation
+[[ ! -d "$SRCDIR" ]] && { print -u2 -r -- "Error: Source dir not found."; exit 1 }
+
 # Create target if it doesn't exist
 mkdir -p "$TGTDIR"
 

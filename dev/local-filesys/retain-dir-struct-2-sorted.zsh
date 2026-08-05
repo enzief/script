@@ -17,6 +17,10 @@ REORG_DIR=${1%/}
 OLD_SHADOW=${2%/}
 NEW_SHADOW=${3%/}
 
+# Validation
+[[ ! -d "$REORG_DIR" ]] && { print -u2 -r -- "Error: Reorganized data dir not found."; exit 1 }
+[[ ! -d "$OLD_SHADOW" ]] && { print -u2 -r -- "Error: Old shadow dir not found."; exit 1 }
+
 # Create the new shadow root
 mkdir -p "$NEW_SHADOW"
 
