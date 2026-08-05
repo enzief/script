@@ -52,19 +52,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOCALFS-01 | TBD | Pending |
-| LOCALFS-02 | TBD | Pending |
-| LOCALFS-03 | TBD | Pending |
-| MANGA-01 | TBD | Pending |
-| REMOTE-01 | TBD | Pending |
-| REMOTE-02 | TBD | Pending |
-| REMOTE-03 | TBD | Pending |
-| REMOTE-04 | TBD | Pending |
+| LOCALFS-01 | Phase 1 | Pending |
+| LOCALFS-02 | Phase 1 | Pending |
+| LOCALFS-03 | Phase 1 | Pending |
+| MANGA-01 | Phase 2 | Pending |
+| REMOTE-01 | Phase 3 | Pending |
+| REMOTE-02 | Phase 3 | Pending |
+| REMOTE-03 | Phase 3 | Pending |
+| REMOTE-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 8 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 8 ⚠️
+- Mapped to phases: 8 (Phase 1: 3, Phase 2: 1, Phase 3: 4)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-05*
