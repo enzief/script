@@ -51,7 +51,12 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
   1. `number-pages.zsh` reports a clear error when `identify`/ImageMagick fails to read an image's dimensions, instead of failing silently
   2. `number-pages.zsh` still correctly renumbers pages for valid images (no regression from the added error handling)
 
-**Plans**: TBD
+**Plans**: 1 plan
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — `number-pages.zsh` dimension-failure visibility end-to-end: `Error:` prefix, `dim_failures` counter in the summary line, plus the first tracked test for `dev/manga/` (hermetic, stub `identify`, no ImageMagick required)
+
+> **Planning note (2026-08-06):** ImageMagick is not installed on this machine (`identify`, `convert`, `magick` all absent), and `number-pages.zsh` exits 1 at its dependency check without it. The phase test therefore supplies its own `identify` stub on `PATH` rather than depending on a real ImageMagick install — prototyped against the unmodified script during planning. Consequence: the test proves the script's behavior given `identify`'s output contract, not what real ImageMagick emits for a corrupt file. That gap is in-scope-by-omission per `02-CONTEXT.md` D-03, which explicitly declines to check `identify`'s exit code this phase.
 
 ### Phase 3: Remote
 
@@ -89,5 +94,5 @@ Phases have no dependency ordering — they are independent topic-phases and may
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
-| 2. Manga | 0/TBD | Not started | - |
+| 2. Manga | 0/1 | Not started | - |
 | 3. Remote | 0/TBD | Not started | - |
