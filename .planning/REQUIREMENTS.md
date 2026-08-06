@@ -15,7 +15,7 @@ Requirements for the current bug-fix/consistency pass. Each maps to a topic-phas
 
 ### Manga
 
-- [ ] **MANGA-01**: `number-pages.zsh` handles image-dimension detection failures explicitly (wrap `identify`/ImageMagick calls in error handling instead of failing silently on unreadable dimensions)
+- [x] **MANGA-01**: `number-pages.zsh` handles image-dimension detection failures explicitly (wrap `identify`/ImageMagick calls in error handling instead of failing silently on unreadable dimensions)
 
 ### Remote
 
@@ -55,7 +55,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOCALFS-01 | Phase 1 | Complete |
 | LOCALFS-02 | Phase 1 | Complete |
 | LOCALFS-03 | Phase 1 | Complete |
-| MANGA-01 | Phase 2 | Pending |
+| MANGA-01 | Phase 2 | Complete |
 | REMOTE-01 | Phase 3 | Pending |
 | REMOTE-02 | Phase 3 | Pending |
 | REMOTE-03 | Phase 3 | Pending |

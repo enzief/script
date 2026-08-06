@@ -54,7 +54,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 **Plans**: 1 plan
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — `number-pages.zsh` dimension-failure visibility end-to-end: `Error:` prefix, `dim_failures` counter in the summary line, plus the first tracked test for `dev/manga/` (hermetic, stub `identify`, no ImageMagick required)
+- [x] 02-01-PLAN.md — `number-pages.zsh` dimension-failure visibility end-to-end: `Error:` prefix, `dim_failures` counter in the summary line, plus the first tracked test for `dev/manga/` (hermetic, stub `identify`, no ImageMagick required)
 
 > **Planning note (2026-08-06):** ImageMagick is not installed on this machine (`identify`, `convert`, `magick` all absent), and `number-pages.zsh` exits 1 at its dependency check without it. The phase test therefore supplies its own `identify` stub on `PATH` rather than depending on a real ImageMagick install — prototyped against the unmodified script during planning. Consequence: the test proves the script's behavior given `identify`'s output contract, not what real ImageMagick emits for a corrupt file. That gap is in-scope-by-omission per `02-CONTEXT.md` D-03, which explicitly declines to check `identify`'s exit code this phase.
 
@@ -82,6 +82,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 Captured 2026-08-05 during Phase 01 discussion: the `retain-dir-struct-*.zsh` pipeline (1/2/3) only tracks file identity via a shadow hash tree — none of them ever `mv` the real data files. Script 1 creates the shadow map, script 2 re-syncs the shadow tree after a manual reorganization, script 3 is a read-only lookup. There's no tool that goes the other direction: given the shadow map, physically move/rename the real files to match wherever their shadow pointer says they should be. `dev/remote/` has an equivalent for its own pipeline (`rename-remote-files-2-rename-local.zsh` actually moves files); `local-filesys` does not. `CONCERNS.md` already flags this gap indirectly ("What's not tested: end-to-end workflows (e.g., create shadow → reorganize → sync → revert)" — the "revert" step has no implementation). Candidate name: `retain-dir-struct-4-revert.zsh`.
