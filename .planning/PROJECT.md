@@ -17,10 +17,10 @@ Each script does its one job correctly and safely — these scripts move, rename
 - ✓ Sequential manga page renumbering with chapter/suffix support — existing
 - ✓ Remote (MEGA via rclone) file matching and renaming to mirror local structure (2-step: match, then rename) — existing
 - ✓ `local-filesys` scripts behave correctly and consistently — Phase 01 (process-substitution loops replacing subshell-fragile pipes, `print -r --` output standardization across all three scripts, `--dry-run` preview on `retain-dir-struct-2-sorted.zsh`, 29-assertion regression test)
+- ✓ `manga` scripts remain reliable and handle image-dimension detection failures explicitly — Phase 02 (`number-pages.zsh` now prints an `Error:`-prefixed, non-fatal message and a `dim_failures` count in the closing summary instead of a silent-ish `Warning:`; first tracked test for `dev/manga/`, 24-assertion regression suite)
 
 ### Active
 
-- [ ] `manga` scripts remain reliable and get usability polish (explicit error handling around `identify`/ImageMagick calls)
 - [ ] `remote` scripts behave correctly and safely (fix the subshell scope bug in `rename-remote-files-1-match-remote.zsh` that makes matching always fail; add `command -v` checks for `rclone`/`jq`; validate sourced shadow-file variables before use in `rename-remote-files-2-rename-local.zsh`; move hardcoded remote name/path out of plaintext)
 - [ ] New topics/scripts get added ad hoc as new needs arise (open-ended — no fixed set)
 
@@ -51,6 +51,7 @@ Each script does its one job correctly and safely — these scripts move, rename
 | Existing scripts marked Validated, but their bugs are in-scope Active work | User wants correctness/consistency/usability fixes now, not just documentation of what exists | Phase 01: the assumed subshell root cause was actually a misdiagnosis (zsh runs the last pipeline element in the current shell, unlike bash), so the fix shipped as hardening; code review then found and fixed 2 real bugs the original diagnosis missed (silent false-success on a missing source dir, `--dry-run` still writing to disk) |
 | New topics added later via `/gsd-phase`, not pre-planned | User doesn't know future topics yet — they'll emerge organically | — Pending |
 | Reversed: bug fixes now get a tracked test suite (project-wide) | Decided during Phase 1 discussion — subshell bugs went undetected for a long time; a tracked test file catches regressions without needing full CI | Delivered in Phase 01: 29-assertion `dev/local-filesys/tests/test-retain-dir-struct.zsh` covering all three scripts |
+| Dimension-detection failures stay non-fatal, just louder | User declined to change detection scope, exit-code behavior, or control flow — only wanted the existing silent-ish `Warning:` made impossible to miss | Delivered in Phase 02: `Warning:` → `Error:` prefix plus a `dim_failures` count appended to the summary line when > 0; script still exits 0 and renumbers every file. First `dev/manga/` test suite (24 assertions) added alongside. |
 
 ## Evolution
 
@@ -70,4 +71,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-05 after Phase 01*
+*Last updated: 2026-08-06 after Phase 02*
