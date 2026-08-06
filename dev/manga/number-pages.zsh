@@ -79,13 +79,15 @@ fi
 # First pass: detect double pages (width > height), calculate total page count
 typeset -A is_double
 total_pages=0
+dim_failures=0
 
 for f in "${image_files[@]}"; do
     dims=$(identify -format '%w %h\n' "$f" 2>/dev/null | head -1)
     if [[ -z "$dims" ]]; then
-        echo "Warning: cannot read dimensions for '${f:t}', treating as single page" >&2
+        echo "Error: cannot read dimensions for '${f:t}', treating as single page" >&2
         is_double[$f]=0
         (( total_pages++ ))
+        (( dim_failures++ ))
         continue
     fi
     w="${dims%% *}"
@@ -144,4 +146,8 @@ for i in {1..${#temp_files}}; do
     mv -- "${temp_files[$i]}" "${dir}/${new_name}"
 done
 
-echo "Renamed ${#image_files} files (${total_pages} pages)."
+if (( dim_failures > 0 )); then
+    echo "Renamed ${#image_files} files (${total_pages} pages, ${dim_failures} dimension-detection failures)."
+else
+    echo "Renamed ${#image_files} files (${total_pages} pages)."
+fi
