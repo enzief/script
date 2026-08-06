@@ -142,6 +142,119 @@ else
     _record 1 "Task1: exit code is 0 (got $NP_EXIT)"
 fi
 
+# --- Scenario A: zero-failure boundary (other side of D-02's threshold) ---
+A_DIR="$FIXROOT/t2a"
+mkdir -p "$A_DIR"
+mkimg "$A_DIR/01.jpg" "800 1200"
+mkimg "$A_DIR/02.jpg" "800 1200"
+run_np "$A_DIR" 7
+
+assert_contains "ScenarioA: summary is the pre-change wording, byte for byte" \
+    "$NP_OUT" "Renamed 2 files (2 pages)."
+
+if [[ "$NP_OUT" != *"dimension-detection failures"* ]]; then
+    _record 0 "ScenarioA: summary does not carry the failure clause"
+else
+    _record 1 "ScenarioA: summary does not carry the failure clause"
+fi
+
+if [[ "$NP_ERR" != *"Error:"* ]]; then
+    _record 0 "ScenarioA: stderr contains no Error: line"
+else
+    _record 1 "ScenarioA: stderr contains no Error: line"
+fi
+
+if [[ "$NP_EXIT" == "0" ]]; then
+    _record 0 "ScenarioA: exit code is 0"
+else
+    _record 1 "ScenarioA: exit code is 0 (got $NP_EXIT)"
+fi
+
+# --- Scenario B: count is a real count, not a boolean ---
+B_DIR="$FIXROOT/t2b"
+mkdir -p "$B_DIR"
+mkimg "$B_DIR/01.jpg" "800 1200"
+mkimg "$B_DIR/02.jpg"
+mkimg "$B_DIR/03.jpg" "800 1200"
+mkimg "$B_DIR/04.jpg"
+run_np "$B_DIR" 9
+
+assert_contains "ScenarioB: summary reports 2 dimension-detection failures" \
+    "$NP_OUT" "2 dimension-detection failures"
+
+assert_contains "ScenarioB: stderr reports Error: for 02.jpg" \
+    "$NP_ERR" "Error: cannot read dimensions for '02.jpg'"
+
+assert_contains "ScenarioB: stderr reports Error: for 04.jpg" \
+    "$NP_ERR" "Error: cannot read dimensions for '04.jpg'"
+
+if [[ "$NP_EXIT" == "0" ]]; then
+    _record 0 "ScenarioB: exit code is 0"
+else
+    _record 1 "ScenarioB: exit code is 0 (got $NP_EXIT)"
+fi
+
+# --- Scenario D: the two safety prohibitions, asserted behaviorally ---
+# Reuses Scenario B's directory and its already-captured run (it had
+# failures), proving the failure path never became fatal and Stage 1 never
+# aborted partway leaving real files stranded as staging files.
+if [[ "$NP_EXIT" == "0" ]]; then
+    _record 0 "ScenarioD: the failure run still exits 0 (not fatal)"
+else
+    _record 1 "ScenarioD: the failure run still exits 0 (not fatal) (got $NP_EXIT)"
+fi
+
+stray_count=$(find "$B_DIR" -name '.numbering_tmp_*' 2>/dev/null | wc -l)
+if [[ "$stray_count" == "0" ]]; then
+    _record 0 "ScenarioD: no .numbering_tmp_* staging files remain"
+else
+    _record 1 "ScenarioD: no .numbering_tmp_* staging files remain (found $stray_count)"
+fi
+
+# --- Scenario C: no regression in renumbering (ROADMAP Phase 2 criterion 2) ---
+# 01.jpg portrait, 02.jpg landscape (consumes two page numbers), 03.jpg and
+# 04.jpg portrait -- all with readable dimensions, chapter 5, default
+# start page 1. Expected numbering derived from number-pages.zsh directly:
+#   total_pages = 1 + 2 + 1 + 1 = 5 -> page_width = max(2, len("5")) = 2
+#   01.jpg -> page 01            -> 005_01.jpg
+#   02.jpg -> pages 02-03 (double) -> 005_02-3.jpg (shortest distinguishing suffix)
+#   03.jpg -> page 04            -> 005_04.jpg
+#   04.jpg -> page 05            -> 005_05.jpg
+C_DIR="$FIXROOT/t2c"
+mkdir -p "$C_DIR"
+mkimg "$C_DIR/01.jpg" "800 1200"
+mkimg "$C_DIR/02.jpg" "1600 1200"
+mkimg "$C_DIR/03.jpg" "800 1200"
+mkimg "$C_DIR/04.jpg" "800 1200"
+run_np "$C_DIR" 5
+
+assert_path "ScenarioC: 01.jpg renamed to 005_01.jpg" \
+    "$C_DIR/005_01.jpg" "exists"
+assert_path "ScenarioC: 02.jpg (landscape) renamed to 005_02-3.jpg" \
+    "$C_DIR/005_02-3.jpg" "exists"
+assert_path "ScenarioC: 03.jpg renamed to 005_04.jpg" \
+    "$C_DIR/005_04.jpg" "exists"
+assert_path "ScenarioC: 04.jpg renamed to 005_05.jpg" \
+    "$C_DIR/005_05.jpg" "exists"
+
+assert_path "ScenarioC: original 01.jpg no longer exists" \
+    "$C_DIR/01.jpg" "absent"
+assert_path "ScenarioC: original 02.jpg no longer exists" \
+    "$C_DIR/02.jpg" "absent"
+assert_path "ScenarioC: original 03.jpg no longer exists" \
+    "$C_DIR/03.jpg" "absent"
+assert_path "ScenarioC: original 04.jpg no longer exists" \
+    "$C_DIR/04.jpg" "absent"
+
+assert_contains "ScenarioC: summary is the zero-failure wording with pages exceeding file count" \
+    "$NP_OUT" "Renamed 4 files (5 pages)."
+
+if [[ "$NP_EXIT" == "0" ]]; then
+    _record 0 "ScenarioC: exit code is 0"
+else
+    _record 1 "ScenarioC: exit code is 0 (got $NP_EXIT)"
+fi
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
