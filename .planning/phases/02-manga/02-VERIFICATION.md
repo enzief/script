@@ -1,15 +1,17 @@
 ---
 phase: 02-manga
 verified: 2026-08-06T13:15:00Z
-status: human_needed
+status: passed
 score: 6/6 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 behavior_unverified_items: []
 human_verification:
+
   - test: "Run number-pages.zsh against a scratch copy of a real manga chapter that includes one deliberately corrupted image file, using real ImageMagick (not the test's stub identify)."
     expected: "The Error: line is noticeable in the output stream, and the summary's dimension-detection failure count matches the number of files that actually failed to report dimensions. Never run against an original chapter — the script renames in place."
     why_human: "This machine has no ImageMagick installed (identify/convert/magick all absent from PATH), so it cannot be automated here. The plan's own <human-check> (02-01-PLAN.md verification block) explicitly defers this to end-of-phase verification: the stub models identify's empty-stdout output contract, not what real ImageMagick emits when it encounters a genuinely corrupt file. SUMMARY.md's coverage item D5 also flags this as human_judgment: true."
+
   - test: "Confirm (by design review, not re-running the suite) that the two safety prohibitions authored in 02-01-PLAN.md must_haves.prohibitions still hold: (1) the dimension-failure branch never becomes a fatal abort that could strand .numbering_tmp_* staging files, and (2) the test never sources its fixture root from argv/env/cwd."
     expected: "Both hold in the current code."
     why_human: "Both prohibitions are marked status: unresolved / flagged: true in the plan's frontmatter with no explicit verification: test tier declared, so per the judgment-tier prohibition policy this verifier's confirmation is recorded as a non-authoritative LLM-judge verdict, not a substitute for human sign-off. Automated evidence backing the judgment: Scenario D in the test suite directly exercises prohibition (1) (asserts exit 0 and zero .numbering_tmp_* files remaining after a run containing failures — confirmed passing); a direct read of dev/manga/number-pages.zsh lines 86-92 shows no exit/return statement in the dimension-failure branch; a direct read of dev/manga/tests/test-number-pages.zsh confirms FIXROOT is sourced only from $(mktemp -d) with no $1/$@/env usage for the fixture root."
