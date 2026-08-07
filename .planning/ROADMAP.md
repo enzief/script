@@ -71,7 +71,34 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
   3. `rename-remote-files-2-rename-local.zsh` validates that `MATCHED_REMOTE_PATH` and `ORIGINAL_LOCAL_PATH` are set before using them, instead of silently continuing with empty values
   4. Remote name/path configuration is read from an environment variable or a git-ignored config file, with no hardcoded plaintext remote config left in `rename-remote-files-1-match-remote.zsh`
 
-**Plans**: TBD
+**Plans**: 2 plans
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — `rename-remote-files-1-match-remote.zsh` end-to-end: the first tracked test for `dev/remote/` (hermetic round-trip, stub `rclone`, real `jq`), `rclone`/`jq` preflight checks, required `REMOTE_NAME`/`REMOTE_PATH` environment config replacing the hardcoded literals, and the process-substitution match loop
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — `rename-remote-files-2-rename-local.zsh`: per-iteration reset of the sourced variables plus non-empty validation with skip-and-continue, and the reversion path's empty-input, missing-sync-file, and repeat-run coverage
+
+> **Planning note (2026-08-07):** two findings from planning, both needing a developer look.
+> **(1)** Success criterion 1's premise was empirically disproven, exactly as in Phase 1. zsh runs
+> the last element of a pipeline in the current shell, so `remote_map` is readable — and writable —
+> inside the `find | while` loop. The unmodified script was run against a fixture tree with a
+> stubbed `rclone` and printed `Match Found` for both seeded sizes, wrote both shadow files, and
+> moved both files; script 2 then reverted them. Criterion 1 is already TRUE before any code
+> change; plan 03-01 ships the loop conversion as hardening and the regression test as the real
+> deliverable. See the `03-01-PLAN.md` objective for the evidence. Criterion wording left unchanged
+> pending developer review.
+> **(2)** Success criterion 2 says *both* remote scripts must fail fast on a missing `rclone` or
+> `jq`, but `rename-remote-files-2-rename-local.zsh` invokes neither tool anywhere in its body. Per
+> `03-CONTEXT.md` D-03 the checks are added to script 1 only, reading REMOTE-02 as "each script
+> checks what it actually uses". Criterion 2 as written cannot be satisfied literally without
+> adding a dead check.
+> **(3)** Planning also found a defect REMOTE-03's wording does not cover: because the loop body
+> shares one variable scope, a malformed shadow file inherits the *previous* file's
+> `ORIGINAL_LOCAL_PATH` and `MATCHED_REMOTE_PATH`, so a bare presence check would pass and the
+> script would move the wrong file. Plan 03-02 resets both variables per iteration, which is what
+> makes the requested validation non-vacuous.
 
 ## Backlog
 
@@ -96,4 +123,4 @@ Phases have no dependency ordering — they are independent topic-phases and may
 |-------|----------------|--------|-----------|
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
-| 3. Remote | 0/TBD | Not started | - |
+| 3. Remote | 0/2 | Not started | - |
