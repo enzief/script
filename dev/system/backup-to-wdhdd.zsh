@@ -221,15 +221,12 @@ if confirm "Firefox profile (958M total, ~662M is per-site storage/cache -- will
   copy "snap/firefox/common/.mozilla/firefox/" "dotfiles/snap/firefox/common/.mozilla/firefox/" --exclude=storage
 fi
 
-if confirm ".config/Code (1.4G total, mostly workspaceStorage/CachedData -- will exclude caches) -- back up settings?"; then
-  copy ".config/Code/" "dotfiles/.config/Code/" \
-    --exclude=Cache --exclude="Code Cache" --exclude=GPUCache \
-    --exclude=CachedData --exclude=CachedExtensionVSIXs \
-    --exclude=workspaceStorage --exclude=logs --exclude="Service Worker"
-fi
-
-if confirm ".config/nvm (1.1G, redownloadable node versions) -- back up? [recommend: No]"; then
-  copy ".config/nvm/" "dotfiles/.config/nvm/"
+# D-08 (260808): originally named .config/nvm, a path nvm never creates -- nvm installs
+# to $HOME/.nvm, so this prompt's existence guard silently caught nothing for the entire
+# life of the script. Repointed at the real path; size re-measured on 260808 (236M, was
+# claimed as 1.1G).
+if confirm ".nvm (236M, redownloadable node versions) -- back up? [recommend: No]"; then
+  copy ".nvm/" "dotfiles/.nvm/"
 fi
 
 if confirm ".config/hakuneko-desktop (294M, but 293M is Cache -- will exclude cache) -- back up?"; then
