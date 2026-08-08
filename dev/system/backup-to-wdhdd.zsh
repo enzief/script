@@ -112,6 +112,35 @@ copy ".codemoss/" "dotfiles/.codemoss/" --exclude=dependencies
 for f in shabontama go fcitx5 kate vlc transmission calibre thefuck ibus; do
   copy ".config/$f/" "dotfiles/.config/$f/"
 done
+
+# Curated KDE Plasma desktop config -- new as of 260808, none of this existed under the
+# old LXQt setup. These are loose rc files sitting directly under ~/.config; the directory
+# loop above only reaches subdirectories, so nothing here overlaps it -- note that
+# .config/kate/ (the directory) is already covered above while katerc and friends are
+# separate loose files alongside it. ~35KB total. Selection principle: include a file only
+# if losing it means manually redoing a setting the user deliberately chose, versus
+# derived/ephemeral/redownloadable/untouched-default state.
+for f in \
+    kdeglobals kglobalshortcutsrc kwinrc kwinoutputconfig.json \
+    plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kxkbrc \
+    mimeapps.list \
+    dolphinrc konsolerc konsolesshconfig katerc kate-externaltoolspluginrc katevirc \
+    gwenviewrc okularrc okularpartrc spectaclerc; do
+  copy_file ".config/$f" "dotfiles/.config/$f"
+done
+
+# Deliberately skipped, considered and rejected:
+# - .local/share/klipper (588K sqlite clipboard history): user data, not config, and
+#   routinely holds pasted passwords/tokens -- not worth the exposure on an unencrypted
+#   exFAT drive for zero configuration value.
+# - .config/kdeconnect: holds an unencrypted device private key/cert; the restore script's
+#   permission-fix pass covers only .ssh/.gnupg/.aws, so this would land world-readable.
+#   Re-pairing a phone takes seconds.
+# - .local/share/claude (844M, only versions/): redownloadable Claude Code release
+#   binaries. $HOME/.claude, the real config, is already covered above.
+# - The remaining ~70 ~/.config entries: app-generated caches, session state, or untouched
+#   defaults. Deliberately not curated.
+
 copy ".config/Signal/" "dotfiles/.config/Signal/" \
   --exclude=Cache --exclude="Code Cache" --exclude=GPUCache \
   --exclude=blob_storage --exclude="Service Worker"
@@ -119,7 +148,8 @@ copy ".config/Signal/" "dotfiles/.config/Signal/" \
 for f in rclone uv uvx coursier env env.fish; do
   copy_file ".local/bin/$f" "dotfiles/.local/bin/$f"
 done
-for f in kwalletd dolphin gwenview okular kxmlgui5; do
+# konsole: saved terminal profiles; kate: editor session/state
+for f in kwalletd dolphin gwenview okular kxmlgui5 konsole kate; do
   copy ".local/share/$f/" "dotfiles/.local/share/$f/"
 done
 
