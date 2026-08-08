@@ -1,0 +1,125 @@
+KUBUNTU REINSTALL — FULL STEPS (Lubuntu -> Kubuntu, same disk)
+================================================================
+Backup drive: wdhdd, exfat, label WD40EZAX, contains /lubuntu/ with copies of:
+  backup-to-wdhdd.zsh install-essentials.sh restore-from-wdhdd.zsh
+  clone-clean-repos.sh REINSTALL_INSTRUCTIONS.txt
+These are copies synced from the repo by backup-to-wdhdd.zsh's companion-sync step.
+Disk being wiped: currently /dev/sdb (~469G). wdhdd is a SEPARATE disk (currently
+/dev/sdd, ~3.7T) and is NOT touched by this reinstall.
+
+SAFETY: physically unplug wdhdd (and any other external drive) before step 2's
+partitioning screen. There is no good reason the installer should ever see it, and
+it removes any chance of picking the wrong disk.
+
+
+STEP 0 — before you start
+--------------------------
+On the current machine, run the backup one last time to catch anything since the
+last run:
+    zsh ~/work/iswi/script/dev/system/backup-to-wdhdd.zsh
+
+
+STEP 1 — build the installer USB
+----------------------------------
+Download the Ubuntu SERVER iso (not Kubuntu desktop — too big for a 4GB USB) from:
+    https://ubuntu.com/download/server
+Match the release number to whatever Kubuntu release you're targeting.
+
+Find your USB device (CHECK THE SIZE CAREFULLY, do not guess):
+    lsblk
+Write the iso to it — replace both placeholders after confirming them yourself:
+    sudo dd if=/path/to/ubuntu-server-XX.XX-live-server-amd64.iso \
+        of=/dev/sdX bs=4M status=progress conv=fsync
+    sync
+
+
+STEP 2 — install Ubuntu Server
+---------------------------------
+Unplug wdhdd and any other external drive first (see SAFETY above).
+Boot from the USB (boot-menu key varies by hardware, often F12/F2/Del).
+Through the installer:
+  - network: configure wired/wifi (needed later for apt installs)
+  - storage: guided, use entire disk -> the ~469G internal disk (NOT a ~3.7T one --
+    if you see anything close to 3.7T in the list, wdhdd is still plugged in, stop
+    and unplug it)
+  - user account: use the same username as before (enzief) to keep $HOME paths
+    matching what the scripts expect
+  - skip optional server snaps (Docker etc.)
+Finish, remove the USB when prompted, reboot.
+You'll land on a plain text login console — no desktop yet. Expected.
+
+
+STEP 3 — first boot, mount wdhdd, run essentials installer
+--------------------------------------------------------------
+Log in at the text console with the account you just created.
+Plug wdhdd back in now.
+
+exFAT support isn't guaranteed on a minimal server install:
+    sudo apt update
+    sudo apt install -y exfatprogs
+
+Find and mount the drive:
+    lsblk -f
+    # look for label WD40EZAX / fstype exfat, e.g. /dev/sdc1 — confirm before mounting
+    sudo mkdir -p /mnt/wdhdd
+    sudo mount /dev/disk/by-label/WD40EZAX /mnt/wdhdd
+    # if the by-label path doesn't resolve, mount the device node lsblk showed instead:
+    #   sudo mount /dev/sdX1 /mnt/wdhdd
+
+Run the essentials installer (this installs kubuntu-desktop first, then everything
+else — git, zsh+oh-my-zsh, nvm/npm, uv, Claude Code CLI, Brave, Firefox, MEGAsync,
+Signal, Telegram, VLC/Transmission/calibre, fcitx5, Steam, testdisk):
+    bash /mnt/wdhdd/lubuntu/install-essentials.sh
+
+This takes a while (kubuntu-desktop alone pulls a lot) and prompts for your sudo
+password a few times along the way — stay near it.
+
+When it finishes:
+    sudo reboot
+
+
+STEP 4 — after reboot, restore your data
+-------------------------------------------
+You should now see the SDDM login screen -> log into Plasma.
+Open a terminal (Konsole, from the app launcher).
+
+wdhdd may auto-mount now that a full desktop is running (check Dolphin's sidebar,
+or /media/enzief/wdhdd/). If not, repeat the mount from Step 3:
+    sudo mkdir -p /mnt/wdhdd
+    sudo mount /dev/disk/by-label/WD40EZAX /mnt/wdhdd
+    # adjust the mount path below to wherever it actually landed
+
+Run the restore (zsh is installed now, from Step 3):
+    zsh /mnt/wdhdd/lubuntu/restore-from-wdhdd.zsh
+
+This overlays your real dotfiles/configs, work/, Documents/, etc. on top of the
+defaults install-essentials.sh created, and fixes .ssh/.gnupg/.aws permissions
+(exFAT can't store real Unix perms, so it zeroes them during copy — the restore
+script resets them to safe values at the end).
+
+Then re-create the clean git repos (needs the .ssh restored above):
+    bash /mnt/wdhdd/lubuntu/clone-clean-repos.sh
+
+
+STEP 5 — loose ends
+-----------------------
+  - fcitx5 (Vietnamese input): System Settings > Virtual Keyboard, set it as the
+    input method, then log out/in.
+  - 4K Video Downloader: no automated install (unstable download URL) — grab the
+    current .deb yourself from https://www.4kdownload.com
+  - MEGAsync: if install-essentials.sh printed a "no repo found" warning, grab the
+    deb manually from https://mega.io/linux
+  - Open a new terminal (or log out/in) to make sure zsh is your active shell.
+
+
+Where this file needs to live: NOT just on wdhdd and NOT on the disk being wiped —
+you need Step 1-3 before either of those is usable. Print it, email it to yourself,
+or save it on your phone before you start.
+
+The authoritative, editable copies of this document and all four scripts now live
+in dev/system/ in the "script" git repo. The copies on wdhdd are derived and are
+refreshed each time backup-to-wdhdd.zsh's companion-sync step runs — make edits in
+the repo, not on the drive.
+
+The drive folder may still contain older copies of these scripts from before the
+repo became canonical. Delete them so it's unambiguous which set is being run.
