@@ -36,7 +36,7 @@ clone_branch() {
   [ -d "$dest/.git" ] && { echo "skip (exists): $relpath"; return; }
   mkdir -p "$(dirname "$dest")"
   echo "==> $relpath ($ref)"
-  if ! git clone -b "$ref" --single-branch "$remote" "$dest"; then
+  if ! git clone -b "$ref" "$remote" "$dest"; then
     failed_repos+=("$relpath")
   fi
 }
