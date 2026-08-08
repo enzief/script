@@ -64,6 +64,11 @@ fi
 # uv (Python) + Claude Code CLI
 # ---------------------------------------------------------------
 curl -LsSf https://astral.sh/uv/install.sh | sh
+# Note (260808): on this machine Claude Code is actually installed via the native
+# installer (~/.local/share/claude/versions/), not global npm -- global npm here holds
+# only npm/corepack. The npm line below is kept deliberately as the reinstall path since
+# it's verified to work unattended; switching install channels is an open question, not
+# an oversight.
 npm install -g @anthropic-ai/claude-code
 
 # ---------------------------------------------------------------
