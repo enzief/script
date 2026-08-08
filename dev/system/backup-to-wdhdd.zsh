@@ -117,7 +117,7 @@ done
 # old LXQt setup. These are loose rc files sitting directly under ~/.config; the directory
 # loop above only reaches subdirectories, so nothing here overlaps it -- note that
 # .config/kate/ (the directory) is already covered above while katerc and friends are
-# separate loose files alongside it. ~35KB total. Selection principle: include a file only
+# separate loose files alongside it. ~38KB total. Selection principle: include a file only
 # if losing it means manually redoing a setting the user deliberately chose, versus
 # derived/ephemeral/redownloadable/untouched-default state.
 for f in \
@@ -125,7 +125,8 @@ for f in \
     plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kxkbrc \
     mimeapps.list \
     dolphinrc konsolerc konsolesshconfig katerc kate-externaltoolspluginrc katevirc \
-    gwenviewrc okularrc okularpartrc spectaclerc; do
+    gwenviewrc okularrc okularpartrc spectaclerc \
+    powerdevilrc powermanagementprofilesrc ksmserverrc kscreenlockerrc kcminputrc; do
   copy_file ".config/$f" "dotfiles/.config/$f"
 done
 
