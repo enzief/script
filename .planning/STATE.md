@@ -6,7 +6,7 @@ current_phase: 3
 current_phase_name: Remote
 status: executing
 stopped_at: Phase 3 context gathered
-last_updated: "2026-08-07T17:56:52.198Z"
+last_updated: "2026-08-08T16:44:13.630Z"
 last_activity: 2026-08-06
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
@@ -95,6 +95,7 @@ None yet.
 | 260805-ety | Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory, mirroring sibling project byse's convention. Update all path references across the repo including committed Phase 1 plans. | 2026-08-05 | 85a8fed | [260805-ety-move-local-filesys-manga-and-remote-into](./quick/260805-ety-move-local-filesys-manga-and-remote-into/) |
 | 260808-8a3 | Adopt kubuntu reinstall scripts from /media/enzief/wdhdd/lubuntu/ into dev/system/, fixing bugs (critical: unmounted-drive guard on backup-to-wdhdd.zsh) and aligning style with repo conventions, while keeping install-essentials.sh and clone-clean-repos.sh as bash and flipping the repo to be the source of truth synced onto the drive. | 2026-08-08 | 189d268 | [260808-8a3-adopt-kubuntu-reinstall-scripts-from-med](./quick/260808-8a3-adopt-kubuntu-reinstall-scripts-from-med/) |
 | 260808-8v1 | Refresh dev/system/backup-to-wdhdd.zsh and install-essentials.sh to reflect this machine's actual post-migration Kubuntu/Plasma state: fixed dead .config/nvm path (real path ~/.nvm), dropped unused VS Code entry, added curated KDE Plasma config coverage (panel layout, shortcuts, window rules, per-app settings, power/lock rc files), switched Claude Code install to the native installer, and skipped kdeconnect/klipper as disclosure risks on unencrypted exFAT. | 2026-08-08 | ae9a568 | [260808-8v1-update-dev-system-install-essentials-sh-](./quick/260808-8v1-update-dev-system-install-essentials-sh-/) |
+| 4 | Fix dev/system/clone-clean-repos.sh: removed --single-branch from git clone so all remote branches are fetched, not just each repo's default ref | 2026-08-08 | f25ce45 | — |
 
 ## Deferred Items
 
