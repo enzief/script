@@ -93,6 +93,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260805-ety | Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory, mirroring sibling project byse's convention. Update all path references across the repo including committed Phase 1 plans. | 2026-08-05 | 85a8fed | [260805-ety-move-local-filesys-manga-and-remote-into](./quick/260805-ety-move-local-filesys-manga-and-remote-into/) |
+| 260808-8a3 | Adopt kubuntu reinstall scripts from /media/enzief/wdhdd/lubuntu/ into dev/system/, fixing bugs (critical: unmounted-drive guard on backup-to-wdhdd.zsh) and aligning style with repo conventions, while keeping install-essentials.sh and clone-clean-repos.sh as bash and flipping the repo to be the source of truth synced onto the drive. | 2026-08-08 | 189d268 | [260808-8a3-adopt-kubuntu-reinstall-scripts-from-med](./quick/260808-8a3-adopt-kubuntu-reinstall-scripts-from-med/) |
 
 ## Deferred Items
 
