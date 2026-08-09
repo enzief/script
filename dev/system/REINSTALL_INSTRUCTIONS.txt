@@ -67,8 +67,9 @@ Find and mount the drive:
     #   sudo mount /dev/sdX1 /mnt/wdhdd
 
 Run the essentials installer (this installs kubuntu-desktop first, then everything
-else — git, zsh+oh-my-zsh, nvm/npm, uv, Claude Code CLI, Brave, Firefox, MEGAsync,
-Signal, Telegram, VLC/Transmission/calibre, fcitx5, Steam, testdisk):
+else — git, zsh+oh-my-zsh, SSH/SFTP server, nvm/npm, uv, Claude Code CLI, Brave,
+Firefox, MEGAsync, Signal, Telegram, VLC/Transmission/calibre, fcitx5, Steam,
+testdisk):
     bash /mnt/wdhdd/lubuntu/install-essentials.sh
 
 This takes a while (kubuntu-desktop alone pulls a lot) and prompts for your sudo
@@ -110,6 +111,9 @@ STEP 5 — loose ends
   - MEGAsync: if install-essentials.sh printed a "no repo found" warning, grab the
     deb manually from https://mega.io/linux
   - Open a new terminal (or log out/in) to make sure zsh is your active shell.
+  - SSH/SFTP server is installed and running, reachable on the LAN with the normal
+    account. "sudo systemctl disable --now ssh" turns it off if not wanted on a
+    given machine.
 
 
 Where this file needs to live: NOT just on wdhdd and NOT on the disk being wiped —
