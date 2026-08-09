@@ -47,6 +47,23 @@ else
 fi
 
 # ---------------------------------------------------------------
+# SSH/SFTP server (general remote file access via this account)
+# ---------------------------------------------------------------
+# Ubuntu's stock OpenSSH config already declares the sftp-server subsystem, so
+# installing the package is the entire job -- its config file is deliberately
+# left untouched. This is general account-level access by design: a jailed
+# share and a separate restricted account were both considered and rejected,
+# so don't "harden" this into one later without asking.
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh || echo "Warning: ssh service failed to enable/start; check 'systemctl status ssh'." >&2
+if command -v ufw &>/dev/null; then
+  sudo ufw allow OpenSSH || echo "Warning: 'ufw allow OpenSSH' failed; port 22 may need opening by hand." >&2
+else
+  echo "No firewall tool (ufw) present; no rule needed."
+fi
+echo "!! SSH/SFTP is now enabled -- connect as $USER to this machine's address (find it with: ip -4 addr)."
+
+# ---------------------------------------------------------------
 # Node.js (nvm) + npm
 # ---------------------------------------------------------------
 if [ ! -d "$HOME/.nvm" ]; then
