@@ -18,10 +18,10 @@ Each script does its one job correctly and safely — these scripts move, rename
 - ✓ Remote (MEGA via rclone) file matching and renaming to mirror local structure (2-step: match, then rename) — existing
 - ✓ `local-filesys` scripts behave correctly and consistently — Phase 01 (process-substitution loops replacing subshell-fragile pipes, `print -r --` output standardization across all three scripts, `--dry-run` preview on `retain-dir-struct-2-sorted.zsh`, 29-assertion regression test)
 - ✓ `manga` scripts remain reliable and handle image-dimension detection failures explicitly — Phase 02 (`number-pages.zsh` now prints an `Error:`-prefixed, non-fatal message and a `dim_failures` count in the closing summary instead of a silent-ish `Warning:`; first tracked test for `dev/manga/`, 24-assertion regression suite)
+- ✓ `remote` scripts behave correctly and safely — Phase 03 (REMOTE-01's presumed bug was a misdiagnosis, same pattern as Phase 01, shipped as hardening; `rclone`/`jq` preflight checks and required `REMOTE_NAME`/`REMOTE_PATH` env vars replacing hardcoded literals on script 1; a real stale-variable-inheritance bug found and fixed on script 2 (REMOTE-03); first tracked test for `dev/remote/`, 77-assertion regression suite; security-audited, 15/15 threats closed)
 
 ### Active
 
-- [ ] `remote` scripts behave correctly and safely (fix the subshell scope bug in `rename-remote-files-1-match-remote.zsh` that makes matching always fail; add `command -v` checks for `rclone`/`jq`; validate sourced shadow-file variables before use in `rename-remote-files-2-rename-local.zsh`; move hardcoded remote name/path out of plaintext)
 - [ ] New topics/scripts get added ad hoc as new needs arise (open-ended — no fixed set)
 
 ### Out of Scope
@@ -52,6 +52,7 @@ Each script does its one job correctly and safely — these scripts move, rename
 | New topics added later via `/gsd-phase`, not pre-planned | User doesn't know future topics yet — they'll emerge organically | — Pending |
 | Reversed: bug fixes now get a tracked test suite (project-wide) | Decided during Phase 1 discussion — subshell bugs went undetected for a long time; a tracked test file catches regressions without needing full CI | Delivered in Phase 01: 29-assertion `dev/local-filesys/tests/test-retain-dir-struct.zsh` covering all three scripts |
 | Dimension-detection failures stay non-fatal, just louder | User declined to change detection scope, exit-code behavior, or control flow — only wanted the existing silent-ish `Warning:` made impossible to miss | Delivered in Phase 02: `Warning:` → `Error:` prefix plus a `dim_failures` count appended to the summary line when > 0; script still exits 0 and renumbers every file. First `dev/manga/` test suite (24 assertions) added alongside. |
+| Real-MEGA-remote UAT (2 human-check items) skipped by user request | User wanted Phase 03 concluded without exercising the real MEGA remote/MegaSync client; all automated checks (77-assertion hermetic suite, 20/20 must-haves, security audit) already passed against a stubbed `rclone` | Phase 03 marked complete with `03-UAT.md` recording both items as `skipped` — real-remote/MegaSync behavior remains unverified against live infrastructure; revisit manually if remote-matching issues surface in practice |
 
 ## Evolution
 
@@ -71,4 +72,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-06 after Phase 02*
+*Last updated: 2026-08-13 after Phase 03*
