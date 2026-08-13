@@ -35,7 +35,7 @@ done < <(echo "$REMOTE_JSON" | jq -r '.[] | select(.IsDir == false) | "\(.Size) 
 # 3. Process local files
 echo "--- Processing local files ---"
 
-find "$LOCAL_SRC_ABS" -type f -print0 | while IFS= read -r -d '' local_file; do
+while IFS= read -r -d '' local_file; do
 
     rel_local_path="${local_file#$LOCAL_SRC_ABS/}"
 
@@ -67,6 +67,6 @@ find "$LOCAL_SRC_ABS" -type f -print0 | while IFS= read -r -d '' local_file; do
     else
         echo "No Match: $rel_local_path (Size: $local_size)"
     fi
-done
+done < <(find "$LOCAL_SRC_ABS" -type f -print0)
 
 echo "--- Script Complete ---"
