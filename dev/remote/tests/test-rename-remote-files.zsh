@@ -527,6 +527,110 @@ else
     _record 1 "Malformed shadow (position independence): sync tree empty after run (found $mal4_sync_remaining)"
 fi
 
+# ======================================================================
+# Plan 03-02 Task 2: reversion path edges -- empty inputs, missing sync
+# file (interruption recovery), and a repeat run (REMOTE-03)
+# ======================================================================
+
+# --- Empty shadow directory: exits 0, no Error:, no reverting: line ---
+EMPTY2_SHADOW="$FIXROOT/empty2_shadow"
+EMPTY2_SYNC="$FIXROOT/empty2_sync"
+mkdir -p "$EMPTY2_SHADOW" "$EMPTY2_SYNC"
+
+run_s2 "$EMPTY2_SHADOW" "$EMPTY2_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Empty shadow dir: script 2 exits 0"
+else
+    _record 1 "Empty shadow dir: script 2 exits 0 (got $S2_EXIT)"
+fi
+if [[ "$S2_ERR" != *"Error:"* ]]; then
+    _record 0 "Empty shadow dir: no stderr Error: line"
+else
+    _record 1 "Empty shadow dir: no stderr Error: line"
+fi
+if [[ "$S2_OUT" != *"reverting:"* ]]; then
+    _record 0 "Empty shadow dir: no reverting: line"
+else
+    _record 1 "Empty shadow dir: no reverting: line"
+fi
+
+# --- Shadow whose sync file is absent: the interruption-recovery state.
+# Script 1 writes each shadow before moving its file, so a run interrupted
+# between those two steps leaves a shadow with no corresponding file under
+# the sync root. Model that directly with a hand-written shadow file. ---
+INT_SHADOW="$FIXROOT/int_shadow"
+INT_SYNC="$FIXROOT/int_sync"
+INT_ORIG_MISSING="$FIXROOT/int_orig/missing.jpg"
+INT_ORIG_VALID="$FIXROOT/int_orig/valid.jpg"
+
+write_shadow "$INT_SHADOW/missing.jpg.txt" "$INT_ORIG_MISSING" "remoteprefix/missing-remote.jpg"
+write_shadow "$INT_SHADOW/valid.jpg.txt" "$INT_ORIG_VALID" "remoteprefix/valid-remote.jpg"
+mkfile "$INT_SYNC/remoteprefix/valid-remote.jpg" 5
+
+run_s2 "$INT_SHADOW" "$INT_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Interruption recovery: script 2 exits 0"
+else
+    _record 1 "Interruption recovery: script 2 exits 0 (got $S2_EXIT)"
+fi
+assert_contains "Interruption recovery: warns naming the missing remote path" \
+    "$S2_OUT" "warning: file not found in sync dir: remoteprefix/missing-remote.jpg"
+assert_path "Interruption recovery: nothing created at the missing shadow's original path" \
+    "$INT_ORIG_MISSING" "absent"
+assert_path "Interruption recovery: sibling valid shadow still reverted normally" \
+    "$INT_ORIG_VALID" "exists"
+
+# --- Repeat run is safe: a full round trip, then script 2 run a second
+# time over the same shadow directory. ---
+RR_SRC="$FIXROOT/rr_src"
+RR_SHADOW="$FIXROOT/rr_shadow"
+RR_SYNC="$FIXROOT/rr_sync"
+mkfile "$RR_SRC/one.jpg" 13
+
+RR_MANIFEST="$FIXROOT/rr_manifest.json"
+cat > "$RR_MANIFEST" <<'JSON'
+[
+  {"Path":"remoteprefix","Name":"remoteprefix","Size":-1,"IsDir":true},
+  {"Path":"remoteprefix/one-remote.jpg","Name":"one-remote.jpg","Size":13,"IsDir":false}
+]
+JSON
+make_stub_rclone "$RR_MANIFEST"
+
+run_s1 "$RR_SRC" "$RR_SHADOW" "$RR_SYNC"
+run_s2 "$RR_SHADOW" "$RR_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Repeat run: first script 2 pass exits 0"
+else
+    _record 1 "Repeat run: first script 2 pass exits 0 (got $S2_EXIT)"
+fi
+assert_path "Repeat run: one.jpg restored after first pass" "$RR_SRC/one.jpg" "exists"
+rr_hash_first=$(sha256sum "$RR_SRC/one.jpg" | awk '{print $1}')
+
+run_s2 "$RR_SHADOW" "$RR_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Repeat run: second script 2 pass exits 0"
+else
+    _record 1 "Repeat run: second script 2 pass exits 0 (got $S2_EXIT)"
+fi
+assert_contains "Repeat run: second pass warns file not found for the already-reverted file" \
+    "$S2_OUT" "warning: file not found in sync dir: remoteprefix/one-remote.jpg"
+if [[ "$S2_ERR" != *"Error:"* ]]; then
+    _record 0 "Repeat run: second pass emits no Error: line"
+else
+    _record 1 "Repeat run: second pass emits no Error: line"
+fi
+assert_path "Repeat run: one.jpg still present after second pass" "$RR_SRC/one.jpg" "exists"
+rr_hash_second=$(sha256sum "$RR_SRC/one.jpg" | awk '{print $1}')
+if [[ "$rr_hash_first" == "$rr_hash_second" ]]; then
+    _record 0 "Repeat run: one.jpg content unchanged between passes (hash match)"
+else
+    _record 1 "Repeat run: one.jpg content unchanged between passes (hash mismatch)"
+fi
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
