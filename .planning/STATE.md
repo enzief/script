@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: Remote
+current_phase: 03
+current_phase_name: remote
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-08-08T16:44:13.630Z"
-last_activity: 2026-08-06
-last_activity_desc: Phase 2 complete, transitioned to Phase 3
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-13T12:37:15.895Z"
+last_activity: 2026-08-13
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-06)
 
 **Core value:** Each script does its one job correctly and safely — these scripts move, rename, and reorganize real files (including on a remote MEGA store), so correctness matters more than feature breadth or polish.
-**Current focus:** Phase 3 — Remote
+**Current focus:** Phase 03 — remote
 
 ## Current Position
 
-Phase: 3 — Remote
-Plan: Not started
+Phase: 03 (remote) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-08-06 — Phase 2 complete, transitioned to Phase 3
+Last activity: 2026-08-13 — Phase 03 execution started
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 01 P01 | 79min | 2 tasks | 2 files |
 | Phase 01 P02 | 4min | 3 tasks | 3 files |
 | Phase 02-manga P01 | 6min | 2 tasks | 2 files |
+| Phase 03 P01 | 6min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Dash-swallowing trap from plan 01-01 recurred on 12 more call sites across scripts 1 and 3; all converted to print -r --, with exact-count separator assertions added to the test
 - [Phase 01]: Post-plan code review found 2 real bugs the plans' own diagnosis missed: scripts 1/2 silently reported success on a missing source directory (CR-01), and --dry-run still created its destination directory and printed a false "created" message (CR-02). Both fixed in commits ef1fa12/9b1bf6b, confirmed by phase verification and UAT.
 - [Phase ?]: MANGA-01: Warning: -> Error: prefix on identify's empty-dims branch, dim_failures counter added, summary line conditionally reports the count only when non-zero — control flow (continue, exit 0) left untouched per D-01/D-04
+- [Phase ?]: REMOTE-01: subshell-scope misdiagnosis disproven again (per D-01) - process-substitution loop conversion in rename-remote-files-1-match-remote.zsh ships as hardening, not a bug fix
+- [Phase ?]: REMOTE-02/REMOTE-04: rclone/jq and REMOTE_NAME/REMOTE_PATH preflight checks added to script 1 only (D-03); hardcoded remote config replaced with required env vars, no fallback (D-06)
 
 ### Pending Todos
 
@@ -110,7 +113,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-07T17:28:32.098Z
-Stopped at: Phase 3 context gathered
-Resume file: /home/enzief/work/iswi/script/.planning/phases/03-remote/03-CONTEXT.md
+Last session: 2026-08-13T12:37:15.885Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
 Last activity: 2026-08-06 - Phase 02 (manga) marked complete: dimension-detection error handling shipped, security reviewed, UAT signed off
