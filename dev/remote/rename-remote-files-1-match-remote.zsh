@@ -3,7 +3,7 @@
 # --- Argument Mapping ---
 if [[ $# -lt 3 ]]; then
     echo "Usage: $0 <local_src> <shadow_dir> <sync_dir>"
-    echo "Requires REMOTE_NAME and REMOTE_PATH environment variables to be set."
+    echo "Requires REMOTE_NAME and REMOTE_PATH environment variables to be set." >&2
     exit 1
 fi
 
