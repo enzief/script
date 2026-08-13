@@ -10,7 +10,7 @@
   - SDK/Client: rclone (universal cloud storage abstraction layer)
   - Access pattern: 
     - `rclone lsjson --recursive` to fetch remote file manifest with Size and Path metadata
-    - `rclone` remote named "mega" with hardcoded path "devicesync/2019"
+    - `rclone` remote name and path read from required `REMOTE_NAME`/`REMOTE_PATH` environment variables (no default; previously hardcoded, moved to env vars in Phase 3 / REMOTE-04)
   - Configuration: Remote must be configured in rclone config file (typically `~/.config/rclone/rclone.conf`)
 
 ## Data Storage
@@ -64,8 +64,8 @@
 **Configuration Files:**
 - `~/.config/rclone/rclone.conf` - rclone remote configuration (MEGA credentials managed here)
 - `~/.config/MegaSync/` - MegaSync client sync folder path configuration
-- rclone remote name: `mega` (hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh:6`)
-- rclone path: `devicesync/2019` (hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh:7`)
+- rclone remote name: required `REMOTE_NAME` environment variable (no default; previously hardcoded, moved to env var in Phase 3 / REMOTE-04)
+- rclone path: required `REMOTE_PATH` environment variable (no default; same change)
 
 **Secrets location:**
 - MEGA authentication credentials stored in rclone config: `~/.config/rclone/rclone.conf`
@@ -86,7 +86,7 @@
 **Primary Integration Path (File Sync Workflow):**
 
 1. `dev/remote/rename-remote-files-1-match-remote.zsh`:
-   - Calls `rclone lsjson --recursive mega:devicesync/2019` 
+   - Calls `rclone lsjson --recursive ${REMOTE_NAME}:${REMOTE_PATH}` (both required env vars, no default, e.g. `mega:devicesync/2019`)
    - Fetches JSON manifest, pipes through jq to extract Size and Path
    - Builds size-based lookup map in memory
    - Matches local files by size against remote files

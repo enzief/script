@@ -57,7 +57,7 @@ script/
 
 **Configuration:**
 - No dedicated config files; all scripts use command-line arguments
-- Hardcoded config in `dev/remote/rename-remote-files-1-match-remote.zsh` (lines 5-6): `REMOTE_NAME="mega"`, `REMOTE_PATH="devicesync/2019"`
+- `REMOTE_NAME`/`REMOTE_PATH` required environment variables read by `dev/remote/rename-remote-files-1-match-remote.zsh` (no default; previously hardcoded, moved to env vars in Phase 3 / REMOTE-04)
 
 **Core Logic:**
 - Manga: `dev/manga/number-pages.zsh` lines 79-145 (main algorithm: image dimension detection, page numbering, renaming)

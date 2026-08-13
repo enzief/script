@@ -44,10 +44,10 @@
 
 ## Security Considerations
 
-**Hardcoded Remote Credentials Path Exposure:**
-- Risk: Scripts reference remote paths like "mega:devicesync/2019" (hardcoded in line 5-6 of rename-remote-files-1-match-remote.zsh), which may contain sensitive path patterns or could leak remote organization structure.
+**Hardcoded Remote Credentials Path Exposure — RESOLVED (Phase 3 / REMOTE-04):**
+- Risk (historical): Scripts referenced remote paths like "mega:devicesync/2019" hardcoded in plaintext (formerly line 5-6 of rename-remote-files-1-match-remote.zsh), which could leak remote organization structure via `git blame`/history even after removal.
 - Files: `dev/remote/rename-remote-files-1-match-remote.zsh`
-- Current mitigation: None — paths are visible in plaintext script.
+- Fix applied: `REMOTE_NAME`/`REMOTE_PATH` are now required environment variables (no default, script fails fast if unset) instead of literals in the script.
 - Recommendations: Move remote configuration (REMOTE_NAME, REMOTE_PATH) to environment variables or a config file that is git-ignored.
 
 **Insufficient Input Validation:**

@@ -123,7 +123,7 @@
 ### Remote File Matching (rename-remote-files-1)
 
 1. User runs script with local source, shadow output, and sync output directories
-2. Script fetches remote file manifest via `rclone lsjson --recursive mega:devicesync/2019`
+2. Script fetches remote file manifest via `rclone lsjson --recursive ${REMOTE_NAME}:${REMOTE_PATH}` (both required env vars, no default, e.g. `mega:devicesync/2019`)
 3. Builds map: `[file_size] -> [remote_path]` from JSON
 4. For each local file:
    - Get file size via `stat -c %s`
@@ -218,7 +218,7 @@
   - `rclone` - required by `rename-remote-files-1-match-remote.zsh` for MEGA interaction
   - `jq` - required by `rename-remote-files-1-match-remote.zsh` for JSON parsing
   - `sha256sum`, `stat`, `find`, `mv`, `mkdir` - standard POSIX utilities
-- **Hardcoded values:** Remote name "mega" and path "devicesync/2019" hardcoded in `rename-remote-files-1-match-remote.zsh` (lines 5-6)
+- **Remote configuration:** `REMOTE_NAME`/`REMOTE_PATH` required environment variables in `rename-remote-files-1-match-remote.zsh` (no default, fails fast if unset) — no longer hardcoded as of Phase 3 (REMOTE-04)
 - **Error handling:** Scripts exit on missing directories, invalid arguments, or failed commands; no recovery/retry logic
 - **Parallelization:** No parallel execution; all operations are sequential
 - **Temporary files:** `number-pages.zsh` uses `.numbering_tmp_*` prefix for staging; not cleaned up if interrupted
@@ -226,13 +226,13 @@
 
 ## Anti-Patterns
 
-### Hardcoded Remote Configuration
+### Hardcoded Remote Configuration — RESOLVED (Phase 3 / REMOTE-04)
 
-**What happens:** Remote name "mega" and path "devicesync/2019" are hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh` (lines 5-6), making the script non-configurable.
+**What happened:** Remote name "mega" and path "devicesync/2019" were hardcoded in `dev/remote/rename-remote-files-1-match-remote.zsh` (formerly lines 5-6), making the script non-configurable.
 
-**Why it's wrong:** Different users or projects need different remote names and paths. Hardcoding forces script modification or script duplication.
+**Why it was wrong:** Different users or projects need different remote names and paths. Hardcoding forced script modification or script duplication.
 
-**Do this instead:** Add `-r remote_name` and `-p remote_path` options to argument parsing; fall back to defaults if unspecified. See `number-pages.zsh` (lines 4-5) for zparseopts example.
+**Fix applied:** `REMOTE_NAME`/`REMOTE_PATH` are now required environment variables (no default; the script fails fast with a clear error if either is unset) instead of CLI flags.
 
 ### Size-Based Matching for Remote Files
 

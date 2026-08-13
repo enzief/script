@@ -53,8 +53,8 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 
 ## Configuration
 
-- rclone remote "mega" with path "devicesync/2019" configured in rclone config (referenced in `dev/remote/rename-remote-files-1-match-remote.zsh`)
-- No `.env` files or environment variable configuration detected
+- `REMOTE_NAME` / `REMOTE_PATH` environment variables (required, no default) — read by `dev/remote/rename-remote-files-1-match-remote.zsh`; previously hardcoded to `"mega"` / `"devicesync/2019"`, moved to required env vars in Phase 3 (REMOTE-04)
+- No `.env` files detected
 - MEGA sync folder path passed as runtime argument to scripts
 - No build configuration files detected (package.json, Makefile, cargo.toml, etc.)
 
@@ -307,7 +307,7 @@ A personal collection of independent zsh quality-of-life scripts, organized by t
 - **Language:** Pure zsh; no external scripting languages (Python, Perl, Ruby) used
 - **Shell options:** Some scripts enable `setopt extended_glob` for case-insensitive globbing (`**/*.(#i)jpg`)
 - **External dependencies:**
-- **Hardcoded values:** Remote name "mega" and path "devicesync/2019" hardcoded in `rename-remote-files-1-match-remote.zsh` (lines 5-6)
+- **Remote configuration:** `REMOTE_NAME`/`REMOTE_PATH` required environment variables in `rename-remote-files-1-match-remote.zsh` (no default, fails fast if unset) — no longer hardcoded as of Phase 3 (REMOTE-04)
 - **Error handling:** Scripts exit on missing directories, invalid arguments, or failed commands; no recovery/retry logic
 - **Parallelization:** No parallel execution; all operations are sequential
 - **Temporary files:** `number-pages.zsh` uses `.numbering_tmp_*` prefix for staging; not cleaned up if interrupted
