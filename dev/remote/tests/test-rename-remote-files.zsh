@@ -214,6 +214,12 @@ assert_path "Round trip: gamma.jpg (unmatched) still exists at its original loca
 assert_path "Round trip: gamma.jpg has no shadow file" \
     "$RT_SHADOW/gamma.jpg.txt" "absent"
 
+rt_rclone_args=$(<"$FIXROOT/rclone.args")
+assert_contains "Round trip: rclone stub received the configured remote spec" \
+    "$rt_rclone_args" "${TEST_REMOTE_NAME}:${TEST_REMOTE_PATH}"
+assert_contains "Round trip: stdout manifest-fetch line names the configured remote spec" \
+    "$S1_OUT" "${TEST_REMOTE_NAME}:${TEST_REMOTE_PATH}"
+
 run_s2 "$RT_SHADOW" "$RT_SYNC"
 
 if [[ "$S2_EXIT" == "0" ]]; then
@@ -232,6 +238,99 @@ if [[ "$rt_sync_remaining" == "0" ]]; then
     _record 0 "Round trip: sync tree holds no files after reversion"
 else
     _record 1 "Round trip: sync tree holds no files after reversion (found $rt_sync_remaining)"
+fi
+
+# ======================================================================
+# Task 2: preflight -- missing rclone/jq, missing REMOTE_NAME/REMOTE_PATH,
+# no mutation on preflight failure, empty-input edges
+# ======================================================================
+
+# --- Missing rclone: PATH points at a directory that exists but is empty ---
+EMPTY_BIN="$FIXROOT/empty_bin"
+mkdir -p "$EMPTY_BIN"
+
+assert_stderr_and_exit "Preflight: missing rclone exits 1, stderr names rclone, stdout empty" 1 "rclone" -- \
+    env PATH="$EMPTY_BIN" "$SCRIPT1" "$FIXROOT/pf_dummy1" "$FIXROOT/pf_dummy2" "$FIXROOT/pf_dummy3"
+
+# --- Missing jq: PATH points at STUB_BIN, which holds only the stub rclone ---
+assert_stderr_and_exit "Preflight: missing jq exits 1, stderr names jq, stdout empty" 1 "jq" -- \
+    env PATH="$STUB_BIN" "$SCRIPT1" "$FIXROOT/pf_dummy1" "$FIXROOT/pf_dummy2" "$FIXROOT/pf_dummy3"
+
+# --- Missing REMOTE_NAME / REMOTE_PATH, plus no-mutation-on-failure ---
+PF_SRC="$FIXROOT/pf_src"
+PF_SHADOW="$FIXROOT/pf_shadow"
+PF_SYNC="$FIXROOT/pf_sync"
+mkfile "$PF_SRC/known.jpg" 7
+
+assert_stderr_and_exit "Preflight: missing REMOTE_NAME exits 1, stderr names REMOTE_NAME, stdout empty" 1 "REMOTE_NAME" -- \
+    env -u REMOTE_NAME PATH="$STUB_BIN:$PATH" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT1" "$PF_SRC" "$PF_SHADOW" "$PF_SYNC"
+
+assert_path "Preflight: no mutation -- source file still present after missing-REMOTE_NAME failure" \
+    "$PF_SRC/known.jpg" "exists"
+assert_path "Preflight: no mutation -- shadow dir not created after missing-REMOTE_NAME failure" \
+    "$PF_SHADOW" "absent"
+assert_path "Preflight: no mutation -- sync dir not created after missing-REMOTE_NAME failure" \
+    "$PF_SYNC" "absent"
+
+assert_stderr_and_exit "Preflight: missing REMOTE_PATH exits 1, stderr names REMOTE_PATH, stdout empty" 1 "REMOTE_PATH" -- \
+    env -u REMOTE_PATH PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" \
+    "$SCRIPT1" "$PF_SRC" "$PF_SHADOW" "$PF_SYNC"
+
+# --- Empty source directory: exits 0, both output dirs created, no match lines ---
+EMPTY_SRC="$FIXROOT/empty_src"
+EMPTY_SHADOW="$FIXROOT/empty_shadow"
+EMPTY_SYNC="$FIXROOT/empty_sync"
+mkdir -p "$EMPTY_SRC"
+
+run_s1 "$EMPTY_SRC" "$EMPTY_SHADOW" "$EMPTY_SYNC"
+
+if [[ "$S1_EXIT" == "0" ]]; then
+    _record 0 "Empty source dir: script 1 exits 0"
+else
+    _record 1 "Empty source dir: script 1 exits 0 (got $S1_EXIT)"
+fi
+assert_path "Empty source dir: shadow directory created" "$EMPTY_SHADOW" "exists"
+assert_path "Empty source dir: sync directory created" "$EMPTY_SYNC" "exists"
+if [[ "$S1_OUT" != *"Match Found"* ]]; then
+    _record 0 "Empty source dir: no Match Found line"
+else
+    _record 1 "Empty source dir: no Match Found line"
+fi
+if [[ "$S1_OUT" != *"No Match"* ]]; then
+    _record 0 "Empty source dir: no No Match line"
+else
+    _record 1 "Empty source dir: no No Match line"
+fi
+
+# --- Manifest with zero file entries (directory entry only): No Match for every local file ---
+NOFILES_SRC="$FIXROOT/nofiles_src"
+NOFILES_SHADOW="$FIXROOT/nofiles_shadow"
+NOFILES_SYNC="$FIXROOT/nofiles_sync"
+mkfile "$NOFILES_SRC/onlyfile.jpg" 9
+
+NOFILES_MANIFEST="$FIXROOT/nofiles_manifest.json"
+cat > "$NOFILES_MANIFEST" <<'JSON'
+[
+  {"Path":"remoteprefix","Name":"remoteprefix","Size":-1,"IsDir":true}
+]
+JSON
+make_stub_rclone "$NOFILES_MANIFEST"
+
+run_s1 "$NOFILES_SRC" "$NOFILES_SHADOW" "$NOFILES_SYNC"
+
+if [[ "$S1_EXIT" == "0" ]]; then
+    _record 0 "Manifest with no file entries: script 1 exits 0"
+else
+    _record 1 "Manifest with no file entries: script 1 exits 0 (got $S1_EXIT)"
+fi
+assert_contains "Manifest with no file entries: reports No Match for the local file" \
+    "$S1_OUT" "No Match:"
+nofiles_src_remaining=$(find "$NOFILES_SRC" -type f | wc -l)
+if [[ "$nofiles_src_remaining" == "1" ]]; then
+    _record 0 "Manifest with no file entries: source tree unchanged"
+else
+    _record 1 "Manifest with no file entries: source tree unchanged (found $nofiles_src_remaining)"
 fi
 
 # --- Summary ---

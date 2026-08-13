@@ -1,12 +1,27 @@
 #!/bin/zsh
 
-# --- Configuration ---
-# Hardcoded remote name per your request
-REMOTE_NAME="mega"
-REMOTE_PATH="devicesync/2019"
 # --- Argument Mapping ---
 if [[ $# -lt 3 ]]; then
     echo "Usage: $0 <local_src> <shadow_dir> <sync_dir>"
+    echo "Requires REMOTE_NAME and REMOTE_PATH environment variables to be set."
+    exit 1
+fi
+
+if ! command -v rclone &>/dev/null; then
+    echo "Error: 'rclone' is required" >&2
+    exit 1
+fi
+if ! command -v jq &>/dev/null; then
+    echo "Error: 'jq' is required" >&2
+    exit 1
+fi
+
+if [[ -z "$REMOTE_NAME" ]]; then
+    echo "Error: REMOTE_NAME environment variable is required" >&2
+    exit 1
+fi
+if [[ -z "$REMOTE_PATH" ]]; then
+    echo "Error: REMOTE_PATH environment variable is required" >&2
     exit 1
 fi
 
