@@ -71,14 +71,14 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
   3. `rename-remote-files-2-rename-local.zsh` validates that `MATCHED_REMOTE_PATH` and `ORIGINAL_LOCAL_PATH` are set before using them, instead of silently continuing with empty values
   4. Remote name/path configuration is read from an environment variable or a git-ignored config file, with no hardcoded plaintext remote config left in `rename-remote-files-1-match-remote.zsh`
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans executed
 **Wave 1**
 
 - [x] 03-01-PLAN.md — `rename-remote-files-1-match-remote.zsh` end-to-end: the first tracked test for `dev/remote/` (hermetic round-trip, stub `rclone`, real `jq`), `rclone`/`jq` preflight checks, required `REMOTE_NAME`/`REMOTE_PATH` environment config replacing the hardcoded literals, and the process-substitution match loop
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — `rename-remote-files-2-rename-local.zsh`: per-iteration reset of the sourced variables plus non-empty validation with skip-and-continue, and the reversion path's empty-input, missing-sync-file, and repeat-run coverage
+- [x] 03-02-PLAN.md — `rename-remote-files-2-rename-local.zsh`: per-iteration reset of the sourced variables plus non-empty validation with skip-and-continue, and the reversion path's empty-input, missing-sync-file, and repeat-run coverage
 
 > **Planning note (2026-08-07):** two findings from planning, both needing a developer look.
 > **(1)** Success criterion 1's premise was empirically disproven, exactly as in Phase 1. zsh runs
@@ -123,4 +123,4 @@ Phases have no dependency ordering — they are independent topic-phases and may
 |-------|----------------|--------|-----------|
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
-| 3. Remote | 1/2 | In Progress|  |
+| 3. Remote | 2/2 | In Progress|  |

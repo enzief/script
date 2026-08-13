@@ -21,7 +21,7 @@ Requirements for the current bug-fix/consistency pass. Each maps to a topic-phas
 
 - [x] **REMOTE-01**: `rename-remote-files-1-match-remote.zsh` correctly matches remote files against local shadow data — fix the subshell variable-scope bug where `remote_map` (populated in the parent shell) is unreadable in the `find | while` loop that looks it up, causing every match to report "No Match"
 - [x] **REMOTE-02**: `rename-remote-files-1-match-remote.zsh` and `rename-remote-files-2-rename-local.zsh` fail fast with a clear error when required dependencies (`rclone`, `jq`) are missing, instead of failing cryptically mid-run
-- [ ] **REMOTE-03**: `rename-remote-files-2-rename-local.zsh` validates that sourced shadow-file variables (`MATCHED_REMOTE_PATH`, `ORIGINAL_LOCAL_PATH`) are actually set before using them, instead of silently continuing with empty values
+- [x] **REMOTE-03**: `rename-remote-files-2-rename-local.zsh` validates that sourced shadow-file variables (`MATCHED_REMOTE_PATH`, `ORIGINAL_LOCAL_PATH`) are actually set before using them, instead of silently continuing with empty values
 - [x] **REMOTE-04**: Remote configuration (`REMOTE_NAME`, `REMOTE_PATH`) is no longer hardcoded in plaintext in `rename-remote-files-1-match-remote.zsh` — moved to an environment variable or a git-ignored config file
 
 ## v2 Requirements
@@ -58,7 +58,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MANGA-01 | Phase 2 | Complete |
 | REMOTE-01 | Phase 3 | Complete |
 | REMOTE-02 | Phase 3 | Complete |
-| REMOTE-03 | Phase 3 | Pending |
+| REMOTE-03 | Phase 3 | Complete |
 | REMOTE-04 | Phase 3 | Complete |
 
 **Coverage:**
