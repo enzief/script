@@ -16,9 +16,19 @@ echo "note: ensure megasync is running and status is green/synced before proceed
 # Find all shadow .txt files
 find "$SHADOW_DIR_ABS" -type f -name "*.txt" -print0 | while IFS= read -r -d '' shadow_file; do
 
+    # Reset before sourcing: the loop body runs in the current shell, so a
+    # malformed shadow file would otherwise inherit the previous iteration's
+    # values and drive a move using another file's paths.
+    unset ORIGINAL_LOCAL_PATH MATCHED_REMOTE_PATH
+
     # Source the machine-readable shadow file to load variables:
     # $ORIGINAL_LOCAL_PATH and $MATCHED_REMOTE_PATH
     source "$shadow_file"
+
+    if [[ -z "$ORIGINAL_LOCAL_PATH" || -z "$MATCHED_REMOTE_PATH" ]]; then
+        echo "Error: shadow file missing required variables, skipping: $shadow_file" >&2
+        continue
+    fi
 
     # Define the current location in the sync folder
     current_sync_loc="$SYNC_DIR_ABS/$MATCHED_REMOTE_PATH"

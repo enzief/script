@@ -149,6 +149,49 @@ run_s2() {
     S2_ERR=$(<"$err_file")
 }
 
+write_shadow() {
+    # write_shadow <shadow-path> <original-local-path> <matched-remote-path>
+    # Writes a well-formed shadow file by hand, in the same KEY="value" form
+    # script 1 emits, so fixtures can place a malformed file among valid
+    # ones without running script 1.
+    mkdir -p "${1:h}"
+    {
+        print -r -- "ORIGINAL_LOCAL_PATH=\"$2\""
+        print -r -- "MATCHED_REMOTE_PATH=\"$3\""
+    } > "$1"
+}
+
+write_bad_shadow() {
+    # write_bad_shadow <shadow-path> [mode]
+    # Writes a shadow file that must fail script 2's validation. mode:
+    #   comment        (default) -- a comment-only file, sets nothing
+    #   empty                    -- a zero-byte file
+    #   blank-original           -- ORIGINAL_LOCAL_PATH="" ; MATCHED_REMOTE_PATH set
+    #   blank-matched            -- MATCHED_REMOTE_PATH="" ; ORIGINAL_LOCAL_PATH set
+    local shadow_path="$1" mode="${2:-comment}"
+    mkdir -p "${shadow_path:h}"
+    case "$mode" in
+        empty)
+            : > "$shadow_path"
+            ;;
+        blank-original)
+            {
+                print -r -- 'ORIGINAL_LOCAL_PATH=""'
+                print -r -- 'MATCHED_REMOTE_PATH="remoteprefix/blank-original.jpg"'
+            } > "$shadow_path"
+            ;;
+        blank-matched)
+            {
+                print -r -- "ORIGINAL_LOCAL_PATH=\"$FIXROOT/blank_matched_orig.jpg\""
+                print -r -- 'MATCHED_REMOTE_PATH=""'
+            } > "$shadow_path"
+            ;;
+        *)
+            print -r -- '# not a valid shadow file' > "$shadow_path"
+            ;;
+    esac
+}
+
 # ======================================================================
 # Task 1: end-to-end round trip -- match, shadow, sync, revert
 # ======================================================================
@@ -331,6 +374,157 @@ if [[ "$nofiles_src_remaining" == "1" ]]; then
     _record 0 "Manifest with no file entries: source tree unchanged"
 else
     _record 1 "Manifest with no file entries: source tree unchanged (found $nofiles_src_remaining)"
+fi
+
+# ======================================================================
+# Plan 03-02 Task 1: a malformed shadow file is skipped, not silently
+# driven by the previous file's paths (REMOTE-03, D-04, D-05)
+# ======================================================================
+
+# --- Comment-only shadow among valid ones ---
+MAL1_SHADOW="$FIXROOT/mal1_shadow"
+MAL1_SYNC="$FIXROOT/mal1_sync"
+MAL1_ORIG1="$FIXROOT/mal1_orig/one.jpg"
+MAL1_ORIG2="$FIXROOT/mal1_orig/sub/two.jpg"
+
+write_shadow "$MAL1_SHADOW/one.jpg.txt" "$MAL1_ORIG1" "remoteprefix/one-remote.jpg"
+write_shadow "$MAL1_SHADOW/sub/two.jpg.txt" "$MAL1_ORIG2" "remoteprefix/sub/two-remote.jpg"
+write_bad_shadow "$MAL1_SHADOW/bad.txt" comment
+mkfile "$MAL1_SYNC/remoteprefix/one-remote.jpg" 5
+mkfile "$MAL1_SYNC/remoteprefix/sub/two-remote.jpg" 6
+
+run_s2 "$MAL1_SHADOW" "$MAL1_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Malformed shadow (comment-only): script 2 exits 0"
+else
+    _record 1 "Malformed shadow (comment-only): script 2 exits 0 (got $S2_EXIT)"
+fi
+assert_contains "Malformed shadow (comment-only): stderr has Error: line naming the bad file" \
+    "$S2_ERR" "Error:"
+assert_contains "Malformed shadow (comment-only): stderr names bad.txt" \
+    "$S2_ERR" "bad.txt"
+assert_path "Malformed shadow (comment-only): valid file one.jpg restored" \
+    "$MAL1_ORIG1" "exists"
+assert_path "Malformed shadow (comment-only): valid file two.jpg restored" \
+    "$MAL1_ORIG2" "exists"
+mal1_sync_remaining=$(find "$MAL1_SYNC" -type f | wc -l)
+if [[ "$mal1_sync_remaining" == "0" ]]; then
+    _record 0 "Malformed shadow (comment-only): sync tree empty after run"
+else
+    _record 1 "Malformed shadow (comment-only): sync tree empty after run (found $mal1_sync_remaining)"
+fi
+if [[ "$S2_OUT" != *"warning: file not found in sync dir:"* ]]; then
+    _record 0 "Malformed shadow (comment-only): no stale-inheritance warning line"
+else
+    _record 1 "Malformed shadow (comment-only): no stale-inheritance warning line"
+fi
+
+# --- Zero-byte shadow ---
+MAL2_SHADOW="$FIXROOT/mal2_shadow"
+MAL2_SYNC="$FIXROOT/mal2_sync"
+MAL2_ORIG1="$FIXROOT/mal2_orig/one.jpg"
+MAL2_ORIG2="$FIXROOT/mal2_orig/sub/two.jpg"
+
+write_shadow "$MAL2_SHADOW/one.jpg.txt" "$MAL2_ORIG1" "remoteprefix/one-remote.jpg"
+write_shadow "$MAL2_SHADOW/sub/two.jpg.txt" "$MAL2_ORIG2" "remoteprefix/sub/two-remote.jpg"
+write_bad_shadow "$MAL2_SHADOW/bad.txt" empty
+mkfile "$MAL2_SYNC/remoteprefix/one-remote.jpg" 5
+mkfile "$MAL2_SYNC/remoteprefix/sub/two-remote.jpg" 6
+
+run_s2 "$MAL2_SHADOW" "$MAL2_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Malformed shadow (zero-byte): script 2 exits 0"
+else
+    _record 1 "Malformed shadow (zero-byte): script 2 exits 0 (got $S2_EXIT)"
+fi
+assert_contains "Malformed shadow (zero-byte): stderr has Error: line naming the bad file" \
+    "$S2_ERR" "Error:"
+assert_contains "Malformed shadow (zero-byte): stderr names bad.txt" \
+    "$S2_ERR" "bad.txt"
+assert_path "Malformed shadow (zero-byte): valid file one.jpg restored" \
+    "$MAL2_ORIG1" "exists"
+assert_path "Malformed shadow (zero-byte): valid file two.jpg restored" \
+    "$MAL2_ORIG2" "exists"
+mal2_sync_remaining=$(find "$MAL2_SYNC" -type f | wc -l)
+if [[ "$mal2_sync_remaining" == "0" ]]; then
+    _record 0 "Malformed shadow (zero-byte): sync tree empty after run"
+else
+    _record 1 "Malformed shadow (zero-byte): sync tree empty after run (found $mal2_sync_remaining)"
+fi
+if [[ "$S2_OUT" != *"warning: file not found in sync dir:"* ]]; then
+    _record 0 "Malformed shadow (zero-byte): no stale-inheritance warning line"
+else
+    _record 1 "Malformed shadow (zero-byte): no stale-inheritance warning line"
+fi
+
+# --- Empty-string assignment (non-empty check, not merely set) ---
+for blank_mode in blank-original blank-matched; do
+    MAL3_SHADOW="$FIXROOT/mal3_${blank_mode}_shadow"
+    MAL3_SYNC="$FIXROOT/mal3_${blank_mode}_sync"
+    MAL3_ORIG="$FIXROOT/mal3_${blank_mode}_orig/one.jpg"
+
+    write_shadow "$MAL3_SHADOW/one.jpg.txt" "$MAL3_ORIG" "remoteprefix/one-remote.jpg"
+    write_bad_shadow "$MAL3_SHADOW/bad.txt" "$blank_mode"
+    mkfile "$MAL3_SYNC/remoteprefix/one-remote.jpg" 5
+
+    run_s2 "$MAL3_SHADOW" "$MAL3_SYNC"
+
+    if [[ "$S2_EXIT" == "0" ]]; then
+        _record 0 "Malformed shadow ($blank_mode): script 2 exits 0"
+    else
+        _record 1 "Malformed shadow ($blank_mode): script 2 exits 0 (got $S2_EXIT)"
+    fi
+    assert_contains "Malformed shadow ($blank_mode): stderr has Error: line naming the bad file" \
+        "$S2_ERR" "Error:"
+    assert_contains "Malformed shadow ($blank_mode): stderr names bad.txt" \
+        "$S2_ERR" "bad.txt"
+    assert_path "Malformed shadow ($blank_mode): sibling valid file restored" \
+        "$MAL3_ORIG" "exists"
+done
+
+# --- Position independence: malformed file among several valid ones, nested
+# at varying depths so traversal order cannot be assumed either way.
+# Assertions below check content and counts only, never relative order. ---
+MAL4_SHADOW="$FIXROOT/mal4_shadow"
+MAL4_SYNC="$FIXROOT/mal4_sync"
+MAL4_ORIG1="$FIXROOT/mal4_orig/a.jpg"
+MAL4_ORIG2="$FIXROOT/mal4_orig/b/b.jpg"
+MAL4_ORIG3="$FIXROOT/mal4_orig/c/d/c.jpg"
+
+write_shadow "$MAL4_SHADOW/a.jpg.txt" "$MAL4_ORIG1" "remoteprefix/a-remote.jpg"
+write_bad_shadow "$MAL4_SHADOW/b/bad.txt" comment
+write_shadow "$MAL4_SHADOW/b/b.jpg.txt" "$MAL4_ORIG2" "remoteprefix/b-remote.jpg"
+write_shadow "$MAL4_SHADOW/c/d/c.jpg.txt" "$MAL4_ORIG3" "remoteprefix/c-remote.jpg"
+mkfile "$MAL4_SYNC/remoteprefix/a-remote.jpg" 5
+mkfile "$MAL4_SYNC/remoteprefix/b-remote.jpg" 6
+mkfile "$MAL4_SYNC/remoteprefix/c-remote.jpg" 7
+
+run_s2 "$MAL4_SHADOW" "$MAL4_SYNC"
+
+if [[ "$S2_EXIT" == "0" ]]; then
+    _record 0 "Malformed shadow (position independence): script 2 exits 0"
+else
+    _record 1 "Malformed shadow (position independence): script 2 exits 0 (got $S2_EXIT)"
+fi
+mal4_error_count=$(grep -c '^Error:' <<< "$S2_ERR")
+if [[ "$mal4_error_count" == "1" ]]; then
+    _record 0 "Malformed shadow (position independence): exactly one Error: line"
+else
+    _record 1 "Malformed shadow (position independence): exactly one Error: line (found $mal4_error_count)"
+fi
+assert_path "Malformed shadow (position independence): a.jpg restored" \
+    "$MAL4_ORIG1" "exists"
+assert_path "Malformed shadow (position independence): b.jpg restored" \
+    "$MAL4_ORIG2" "exists"
+assert_path "Malformed shadow (position independence): c.jpg restored" \
+    "$MAL4_ORIG3" "exists"
+mal4_sync_remaining=$(find "$MAL4_SYNC" -type f | wc -l)
+if [[ "$mal4_sync_remaining" == "0" ]]; then
+    _record 0 "Malformed shadow (position independence): sync tree empty after run"
+else
+    _record 1 "Malformed shadow (position independence): sync tree empty after run (found $mal4_sync_remaining)"
 fi
 
 # --- Summary ---
