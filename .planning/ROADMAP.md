@@ -13,7 +13,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 
 - [x] **Phase 1: Local Filesystem** - Fix subshell variable-scope bugs and standardize output commands in the `local-filesys` scripts (completed 2026-08-05)
 - [x] **Phase 2: Manga** - Add explicit error handling around image-dimension detection in the `manga` scripts (completed 2026-08-06)
-- [ ] **Phase 3: Remote** - Fix the remote matching bug, add dependency checks, validate shadow-file variables, and remove hardcoded config from the `remote` scripts
+- [x] **Phase 3: Remote** - Fix the remote matching bug, add dependency checks, validate shadow-file variables, and remove hardcoded config from the `remote` scripts (completed 2026-08-13)
 
 ## Phase Details
 
@@ -123,4 +123,4 @@ Phases have no dependency ordering — they are independent topic-phases and may
 |-------|----------------|--------|-----------|
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
-| 3. Remote | 2/2 | In Progress|  |
+| 3. Remote | 2/2 | Complete    | 2026-08-13 |
