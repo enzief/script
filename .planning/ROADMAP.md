@@ -14,6 +14,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 - [x] **Phase 1: Local Filesystem** - Fix subshell variable-scope bugs and standardize output commands in the `local-filesys` scripts (completed 2026-08-05)
 - [x] **Phase 2: Manga** - Add explicit error handling around image-dimension detection in the `manga` scripts (completed 2026-08-06)
 - [x] **Phase 3: Remote** - Fix the remote matching bug, add dependency checks, validate shadow-file variables, and remove hardcoded config from the `remote` scripts (completed 2026-08-13)
+- [ ] **Phase 4: local-filesys revert tool** - Build the symmetric shadow/real-file swap tool the `retain-dir-struct-*` pipeline has always lacked (2 plans, see Phase Details below)
 
 ## Phase Details
 
@@ -103,21 +104,47 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 ## Progress
 
 **Execution Order:**
-Phases have no dependency ordering — they are independent topic-phases and may be executed in any order. Default numeric order: 1 → 2 → 3.
+Phases have no dependency ordering — they are independent topic-phases and may be executed in any order. Default numeric order: 1 → 2 → 3 → 4.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
 | 3. Remote | 2/2 | Complete    | 2026-08-13 |
+| 4. local-filesys revert tool | 0/2 | Planned     | — |
 
 ### Phase 4: local-filesys revert tool
 
 **Goal:** Build a symmetric shadow-swap workflow for `dev/local-filesys/`: a "home" tree holds real files at some paths and hash-only shadow placeholders at others (for files currently living in one or more arbitrary, user-supplied "target" trees). `revert` pulls files matching home's shadows back into home, swapping the shadow out to the target tree at the exact spot the file came from; `revert-revert` performs the identical swap in reverse for a true round trip — no location metadata is ever stored, only name+hash matching. This completes the gap the `retain-dir-struct-*.zsh` pipeline (1/2/3) has always had: none of those scripts ever `mv`/relocate real data files, only read/index them. See `04-CONTEXT.md` for the full design.
-**Requirements**: TBD (planning should add a new Local Filesystem requirement code, e.g. `LOCALFS-05`)
+**Requirements**: LOCALFS-05
 **Depends on:** Nothing (independent topic phase)
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 4 to break down)
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — `retain-dir-struct-4-revert.zsh` end-to-end: name-first resolution with mandatory hash verification, the two-`mv` positional swap, the shadow content discriminator, and the full refuse-never-guess error contract (ambiguity, hash mismatch, occupied destination, rollback), plus the first tracked test for the swap tool
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — `--dry-run` preview gating both moves (D-09), and the true round trip: the same script run with the tree roles reversed restores both trees byte-for-byte (D-08), across multiple target trees and names containing spaces
+
+> **Planning note (2026-08-13):** two architecture calls made under `04-CONTEXT.md`'s
+> Claude's Discretion. **(1)** This ships as **one** bidirectional script, not a
+> `revert`/`revert-revert` pair. D-08 states the reverse direction is the identical swap with
+> the tree roles reversed, so a second script would duplicate the whole matching-and-swap core
+> for zero behavioural difference — ruled out by the project's "no speculative abstraction"
+> constraint. Bidirectionality lives in the argument order: the first argument is always the
+> tree whose shadows are being resolved.
+> **(2)** Matching is by **basename**, not by corresponding relative path. After a swap the
+> shadow sits at the real file's old position and the real file at the shadow's old position,
+> so the two trees deliberately do not share relative paths — the basename is the only stable
+> link given D-01 stores no location metadata. This is also what makes D-05's ambiguity case
+> non-vacuous: a relative-path match within a single tree could never collide.
+>
+> Planning also identified a hazard none of the decisions name: in this project a tree
+> legitimately contains real `.txt` data files (every fixture in `test-retain-dir-struct.zsh`
+> is one), so `find -name "*.txt"` alone would treat `notes.txt` as a shadow for a file named
+> `notes`. The plans require a content discriminator — a `.txt` file is a shadow only when its
+> first field is a 64-character lowercase hex hash — derived directly from D-01's format lock.

@@ -12,6 +12,7 @@ Requirements for the current bug-fix/consistency pass. Each maps to a topic-phas
 - [x] **LOCALFS-01**: `retain-dir-struct-2-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `shadow_map` (populated via process substitution) is unreadable in the `find | while` loop that looks it up, causing every lookup to silently fail
 - [x] **LOCALFS-02**: `retain-dir-struct-3-find-sorted.zsh` correctly matches files by hash — fix the subshell variable-scope bug where `file_map` (populated in the parent shell) is unreadable in the `find | while` loop that looks it up
 - [x] **LOCALFS-03**: `retain-dir-struct-1.zsh` uses consistent output commands (`print`, not a mix of `echo` and `print`)
+- [ ] **LOCALFS-05**: A shadow/real-file swap tool for `dev/local-filesys/` — resolves each hash-only `.txt` shadow in a given tree to its real file by filename across one or more user-supplied target trees, verifies the recorded hash before moving, errors out on that item (never guesses) when the match is ambiguous or the hash does not verify, and relocates the existing shadow file itself into the slot the real file vacates. Running the same tool with the tree roles reversed restores the original layout — a true round trip with no location metadata stored anywhere. Supports `--dry-run`. *(New capability, added to the v1.0 milestone after the initial bug-fix scope — see Phase 4.)*
 
 ### Manga
 
@@ -60,11 +61,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REMOTE-02 | Phase 3 | Complete |
 | REMOTE-03 | Phase 3 | Complete |
 | REMOTE-04 | Phase 3 | Complete |
+| LOCALFS-05 | Phase 4 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 8 total
-- Mapped to phases: 8 (Phase 1: 3, Phase 2: 1, Phase 3: 4)
+- v1 requirements: 9 total
+- Mapped to phases: 9 (Phase 1: 3, Phase 2: 1, Phase 3: 4, Phase 4: 1)
 - Unmapped: 0 ✓
 
 ---
