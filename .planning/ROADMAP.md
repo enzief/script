@@ -100,20 +100,6 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 > script would move the wrong file. Plan 03-02 resets both variables per iteration, which is what
 > makes the requested validation non-vacuous.
 
-## Backlog
-
-### Phase 999.1: local-filesys revert tool — move real files to match shadow map (BACKLOG)
-
-**Goal:** [Captured for future planning]
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-Captured 2026-08-05 during Phase 01 discussion: the `retain-dir-struct-*.zsh` pipeline (1/2/3) only tracks file identity via a shadow hash tree — none of them ever `mv` the real data files. Script 1 creates the shadow map, script 2 re-syncs the shadow tree after a manual reorganization, script 3 is a read-only lookup. There's no tool that goes the other direction: given the shadow map, physically move/rename the real files to match wherever their shadow pointer says they should be. `dev/remote/` has an equivalent for its own pipeline (`rename-remote-files-2-rename-local.zsh` actually moves files); `local-filesys` does not. `CONCERNS.md` already flags this gap indirectly ("What's not tested: end-to-end workflows (e.g., create shadow → reorganize → sync → revert)" — the "revert" step has no implementation). Candidate name: `retain-dir-struct-4-revert.zsh`.
-
 ## Progress
 
 **Execution Order:**
@@ -124,3 +110,14 @@ Phases have no dependency ordering — they are independent topic-phases and may
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
 | 3. Remote | 2/2 | Complete    | 2026-08-13 |
+
+### Phase 4: local-filesys revert tool
+
+**Goal:** Build a symmetric shadow-swap workflow for `dev/local-filesys/`: a "home" tree holds real files at some paths and hash-only shadow placeholders at others (for files currently living in one or more arbitrary, user-supplied "target" trees). `revert` pulls files matching home's shadows back into home, swapping the shadow out to the target tree at the exact spot the file came from; `revert-revert` performs the identical swap in reverse for a true round trip — no location metadata is ever stored, only name+hash matching. This completes the gap the `retain-dir-struct-*.zsh` pipeline (1/2/3) has always had: none of those scripts ever `mv`/relocate real data files, only read/index them. See `04-CONTEXT.md` for the full design.
+**Requirements**: TBD (planning should add a new Local Filesystem requirement code, e.g. `LOCALFS-05`)
+**Depends on:** Nothing (independent topic phase)
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 4 to break down)
