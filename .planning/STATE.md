@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 03
 status: completed
-stopped_at: Completed 03-02-PLAN.md — Phase 03 (remote) all plans complete, ready for verification
-last_updated: "2026-08-13T13:10:35.172Z"
+stopped_at: Phase 4 context gathered
+last_updated: "2026-08-14T00:04:10.220Z"
 last_activity: 2026-08-13
 last_activity_desc: Phase 03 execution started
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
   total_plans: 5
   completed_plans: 5
@@ -86,6 +86,10 @@ Recent decisions affecting current work:
 - [Phase ?]: REMOTE-02/REMOTE-04: rclone/jq and REMOTE_NAME/REMOTE_PATH preflight checks added to script 1 only (D-03); hardcoded remote config replaced with required env vars, no fallback (D-06)
 - [Phase ?]: REMOTE-03: added unset-before-source reset plus non-empty validation in rename-remote-files-2-rename-local.zsh, skipping malformed shadow files with an Error: stderr message and continue (D-04/D-05)
 
+### Roadmap Evolution
+
+- Phase 4 added: local-filesys revert tool
+
 ### Pending Todos
 
 None yet.
@@ -116,7 +120,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T12:43:25.570Z
-Stopped at: Completed 03-02-PLAN.md — Phase 03 (remote) all plans complete, ready for verification
-Resume file: None
+Last session: 2026-08-14T00:04:10.210Z
+Stopped at: Phase 4 context gathered
+Resume file: .planning/phases/04-local-filesys-revert-tool/04-CONTEXT.md
 Last activity: 2026-08-06 - Phase 02 (manga) marked complete: dimension-detection error handling shipped, security reviewed, UAT signed off
