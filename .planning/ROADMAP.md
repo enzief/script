@@ -111,24 +111,24 @@ Phases have no dependency ordering — they are independent topic-phases and may
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
 | 3. Remote | 2/2 | Complete    | 2026-08-13 |
-| 4. local-filesys revert tool | 0/2 | Planned     | — |
+| 4. local-filesys revert tool | 2/2 | In Progress|  |
 
 ### Phase 4: local-filesys revert tool
 
 **Goal:** Build a symmetric shadow-swap workflow for `dev/local-filesys/`: a "home" tree holds real files at some paths and hash-only shadow placeholders at others (for files currently living in one or more arbitrary, user-supplied "target" trees). `revert` pulls files matching home's shadows back into home, swapping the shadow out to the target tree at the exact spot the file came from; `revert-revert` performs the identical swap in reverse for a true round trip — no location metadata is ever stored, only name+hash matching. This completes the gap the `retain-dir-struct-*.zsh` pipeline (1/2/3) has always had: none of those scripts ever `mv`/relocate real data files, only read/index them. See `04-CONTEXT.md` for the full design.
 **Requirements**: LOCALFS-05
 **Depends on:** Nothing (independent topic phase)
-**Plans:** 2 plans
+**Plans:** 2/2 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — `retain-dir-struct-4-revert.zsh` end-to-end: name-first resolution with mandatory hash verification, the two-`mv` positional swap, the shadow content discriminator, and the full refuse-never-guess error contract (ambiguity, hash mismatch, occupied destination, rollback), plus the first tracked test for the swap tool
+- [x] 04-01-PLAN.md — `retain-dir-struct-4-revert.zsh` end-to-end: name-first resolution with mandatory hash verification, the two-`mv` positional swap, the shadow content discriminator, and the full refuse-never-guess error contract (ambiguity, hash mismatch, occupied destination, rollback), plus the first tracked test for the swap tool
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — `--dry-run` preview gating both moves (D-09), and the true round trip: the same script run with the tree roles reversed restores both trees byte-for-byte (D-08), across multiple target trees and names containing spaces
+- [x] 04-02-PLAN.md — `--dry-run` preview gating both moves (D-09), and the true round trip: the same script run with the tree roles reversed restores both trees byte-for-byte (D-08), across multiple target trees and names containing spaces
 
 > **Planning note (2026-08-13):** two architecture calls made under `04-CONTEXT.md`'s
 > Claude's Discretion. **(1)** This ships as **one** bidirectional script, not a
