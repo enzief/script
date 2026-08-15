@@ -119,6 +119,20 @@ make_shadow() {
     rm -rf -- "$scratch_src" "$scratch_shadow"
 }
 
+# --- Tree-snapshot helper: sorted "relpath sha256" listing for a whole
+# tree. Used to prove filesystem state -- not output text -- is unchanged
+# across a dry run, and byte-exact across a there-and-back round trip.
+tree_snapshot() {
+    # tree_snapshot <dir>
+    local dir="$1"
+    local rel h
+    while IFS= read -r -d '' f; do
+        rel="${f#$dir/}"
+        h=$(sha256sum -- "$f" | awk '{print $1}')
+        print -r -- "$rel $h"
+    done < <(find "$dir" -type f -print0) | sort
+}
+
 # ======================================================================
 # Case A: clean single-shadow swap (behavior's primary scenario)
 # ======================================================================
@@ -388,6 +402,86 @@ if [[ "$exit_h" == "0" ]]; then
 else
     _record 1 "Case H: skip-only run exits 0 (got $exit_h)"
 fi
+
+# ======================================================================
+# Case I: --dry-run previews the exact set of swaps, skips, and errors a
+# real run over the same fixture would produce, and leaves both trees
+# byte-for-byte unchanged (D-09, T-04-07, T-04-08).
+# ======================================================================
+H_I="$FIXROOT/case_i/home"
+T_I="$FIXROOT/case_i/target"
+mkdir -p "$H_I" "$T_I/x" "$T_I/y" "$T_I/q1" "$T_I/q2"
+
+# ok.jpg: clean unique match -- the swap the dry run must preview
+make_shadow "ok-i-content" "$H_I/ok.jpg.txt"
+print -r -- "ok-i-content" > "$T_I/x/ok.jpg"
+
+# mismatch.jpg: unique name match, wrong content
+make_shadow "correct-i-content" "$H_I/mismatch.jpg.txt"
+print -r -- "wrong-i-content" > "$T_I/y/mismatch.jpg"
+
+# nomatch.jpg: no candidate anywhere in the target tree
+make_shadow "orphan-i-content" "$H_I/nomatch.jpg.txt"
+
+# ambig.jpg: two identical-content candidates, both match the stored hash
+make_shadow "ambig-i-content" "$H_I/ambig.jpg.txt"
+print -r -- "ambig-i-content" > "$T_I/q1/ambig.jpg"
+print -r -- "ambig-i-content" > "$T_I/q2/ambig.jpg"
+
+pre_snapshot_h_i=$(tree_snapshot "$H_I")
+pre_snapshot_t_i=$(tree_snapshot "$T_I")
+
+out_dry_i=$("$SCRIPT4" --dry-run "$H_I" "$T_I" 2>&1)
+exit_dry_i=$?
+
+post_snapshot_h_i=$(tree_snapshot "$H_I")
+post_snapshot_t_i=$(tree_snapshot "$T_I")
+
+assert_equal "Case I: home tree snapshot unchanged across dry run" \
+    "$post_snapshot_h_i" "$pre_snapshot_h_i"
+assert_equal "Case I: target tree snapshot unchanged across dry run" \
+    "$post_snapshot_t_i" "$pre_snapshot_t_i"
+
+assert_contains "Case I: dry run previews the clean match with a Would swap line" \
+    "$out_dry_i" "Would swap: ok.jpg.txt"
+
+if [[ "$out_dry_i" != *"Swapped: "* ]]; then
+    _record 0 "Case I: dry run prints no Swapped confirmation line"
+else
+    _record 1 "Case I: dry run prints no Swapped confirmation line"
+fi
+
+assert_contains "Case I: dry run reports the same hash-mismatch error the real run would" \
+    "$out_dry_i" "Error: hash mismatch for mismatch.jpg.txt"
+assert_contains "Case I: dry run reports the same no-match skip the real run would" \
+    "$out_dry_i" "No matching file found for: nomatch.jpg.txt"
+assert_contains "Case I: dry run reports the same ambiguous-match error the real run would" \
+    "$out_dry_i" "Error: ambiguous match for ambig.jpg.txt"
+
+assert_contains "Case I: dry run closing line states no files were moved" \
+    "$out_dry_i" "Dry run complete. No files were moved."
+
+if [[ "$exit_dry_i" == "1" ]]; then
+    _record 0 "Case I: dry run exits 1 when it reports at least one errored item"
+else
+    _record 1 "Case I: dry run exits 1 when it reports at least one errored item (got $exit_dry_i)"
+fi
+
+# Same fixture, run for real -- since the dry run wrote nothing, the trees
+# are still in their pre-run state. The real run's Totals must equal the
+# dry run's exactly (preview accuracy, not just preview presence).
+dry_totals_i=$(print -r -- "$out_dry_i" | grep '^Totals: ')
+out_real_i=$("$SCRIPT4" "$H_I" "$T_I" 2>&1)
+real_totals_i=$(print -r -- "$out_real_i" | grep '^Totals: ')
+assert_equal "Case I: dry run Totals equal the real run's Totals over the same fixture" \
+    "$dry_totals_i" "$real_totals_i"
+
+# ======================================================================
+# Case J: --dry-run with no tree arguments -- usage error, stderr-only,
+# empty stdout, exit 1.
+# ======================================================================
+assert_stderr_and_exit "Case J: --dry-run alone with no tree args exits 1, stderr-only usage line naming the flag" \
+    1 "--dry-run" -- "$SCRIPT4" "--dry-run"
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"
