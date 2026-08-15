@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 current_phase_name: local-filesys-revert-tool
-status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-08-15T13:24:01.582Z"
+status: verifying
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-08-15T13:29:15.327Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-06)
 
 Phase: 04 (local-filesys-revert-tool) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-15 — Phase 04 execution started
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 86%
 | Phase 03 P01 | 6min | 2 tasks | 2 files |
 | Phase 03 P02 | 10min | 2 tasks | 2 files |
 | Phase 04 P01 | 21min | 2 tasks | 2 files |
+| Phase 04 P02 | 18min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,7 @@ Recent decisions affecting current work:
 - [Phase ?]: REMOTE-02/REMOTE-04: rclone/jq and REMOTE_NAME/REMOTE_PATH preflight checks added to script 1 only (D-03); hardcoded remote config replaced with required env vars, no fallback (D-06)
 - [Phase ?]: REMOTE-03: added unset-before-source reset plus non-empty validation in rename-remote-files-2-rename-local.zsh, skipping malformed shadow files with an Error: stderr message and continue (D-04/D-05)
 - [Phase ?]: [Phase 04]: LOCALFS-05: shipped one bidirectional swap script (not a revert/revert-revert pair) per CONTEXT.md Claude's Discretion, per D-08's confirmed symmetry
+- [Phase ?]: Phase 04-02: No script changes were needed for the round trip / multi-target-tree / spaces cases (Task 2) -- the swap path derivation built in 04-01 was already symmetric by construction, verified rather than assumed
 
 ### Roadmap Evolution
 
@@ -122,7 +124,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T13:24:01.572Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-08-15T13:29:15.317Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
 Last activity: 2026-08-06 - Phase 02 (manga) marked complete: dimension-detection error handling shipped, security reviewed, UAT signed off
