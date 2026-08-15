@@ -14,7 +14,7 @@ A bug-fix/consistency pass across three independent topic folders of personal zs
 - [x] **Phase 1: Local Filesystem** - Fix subshell variable-scope bugs and standardize output commands in the `local-filesys` scripts (completed 2026-08-05)
 - [x] **Phase 2: Manga** - Add explicit error handling around image-dimension detection in the `manga` scripts (completed 2026-08-06)
 - [x] **Phase 3: Remote** - Fix the remote matching bug, add dependency checks, validate shadow-file variables, and remove hardcoded config from the `remote` scripts (completed 2026-08-13)
-- [ ] **Phase 4: local-filesys revert tool** - Build the symmetric shadow/real-file swap tool the `retain-dir-struct-*` pipeline has always lacked (2 plans, see Phase Details below)
+- [x] **Phase 4: local-filesys revert tool** - Build the symmetric shadow/real-file swap tool the `retain-dir-struct-*` pipeline has always lacked (2 plans, see Phase Details below) (completed 2026-08-15)
 
 ## Phase Details
 
@@ -111,14 +111,14 @@ Phases have no dependency ordering — they are independent topic-phases and may
 | 1. Local Filesystem | 2/2 | Complete    | 2026-08-05 |
 | 2. Manga | 1/1 | Complete    | 2026-08-06 |
 | 3. Remote | 2/2 | Complete    | 2026-08-13 |
-| 4. local-filesys revert tool | 2/2 | In Progress|  |
+| 4. local-filesys revert tool | 2/2 | Complete    | 2026-08-15 |
 
 ### Phase 4: local-filesys revert tool
 
 **Goal:** Build a symmetric shadow-swap workflow for `dev/local-filesys/`: a "home" tree holds real files at some paths and hash-only shadow placeholders at others (for files currently living in one or more arbitrary, user-supplied "target" trees). `revert` pulls files matching home's shadows back into home, swapping the shadow out to the target tree at the exact spot the file came from; `revert-revert` performs the identical swap in reverse for a true round trip — no location metadata is ever stored, only name+hash matching. This completes the gap the `retain-dir-struct-*.zsh` pipeline (1/2/3) has always had: none of those scripts ever `mv`/relocate real data files, only read/index them. See `04-CONTEXT.md` for the full design.
 **Requirements**: LOCALFS-05
 **Depends on:** Nothing (independent topic phase)
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
