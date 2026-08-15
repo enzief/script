@@ -101,13 +101,37 @@ for shadow in "${shadow_files[@]}"; do
         continue
     fi
 
-    if (( candidate_count > 1 )); then
-        print -u2 -r -- "Error: ambiguous match for $shadow_rel ($candidate_count candidates)"
-        (( error_count++ ))
-        continue
-    fi
+    if (( candidate_count == 1 )); then
+        real_src="${name_first[$base]}"
+    else
+        # Name collision: disambiguate by hash (D-03). Collect the actual
+        # candidates with a targeted second pass -- only for basenames that
+        # actually collide, so the common case still costs one traversal.
+        typeset -a candidates matches
+        candidates=()
+        matches=()
+        while IFS= read -r -d '' f; do
+            if [[ "${f:t}" == "$base" ]]; then
+                candidates+=("$(realpath -- "$f")")
+            fi
+        done < <(find "${TARGET_TREES[@]}" -type f -print0)
 
-    real_src="${name_first[$base]}"
+        for cand in "${candidates[@]}"; do
+            cand_hash=$(sha256sum -- "$cand" | awk '{print $1}')
+            [[ "$cand_hash" == "$stored_hash" ]] && matches+=("$cand")
+        done
+
+        if (( ${#matches[@]} == 0 )); then
+            print -u2 -r -- "Error: hash mismatch for $shadow_rel (no candidate among $candidate_count matches the stored hash)"
+            (( error_count++ ))
+            continue
+        elif (( ${#matches[@]} > 1 )); then
+            print -u2 -r -- "Error: ambiguous match for $shadow_rel (${#matches[@]} hash-matching candidates)"
+            (( error_count++ ))
+            continue
+        fi
+        real_src="${matches[1]}"
+    fi
 
     # Mandatory hash verification (D-04) -- even on a unique name match.
     cand_hash=$(sha256sum -- "$real_src" | awk '{print $1}')
@@ -127,12 +151,37 @@ for shadow in "${shadow_files[@]}"; do
         continue
     fi
 
-    mv -- "$real_src" "$dest_real"
-    mv -- "$shadow" "$dest_shadow"
+    if ! mv -- "$real_src" "$dest_real"; then
+        print -u2 -r -- "Error: move failed for $shadow_rel ($real_src -> $dest_real)"
+        (( error_count++ ))
+        continue
+    fi
+
+    if ! mv -- "$shadow" "$dest_shadow"; then
+        # Restore the pre-swap state (D-02 invariant: never both, never
+        # neither). The rollback destination is provably vacant -- it's
+        # exactly what the failed move above would have filled.
+        if mv -- "$dest_real" "$real_src"; then
+            print -u2 -r -- "Error: shadow move failed for $shadow_rel; rolled back"
+        else
+            print -u2 -r -- "Error: shadow move failed for $shadow_rel; ROLLBACK FAILED -- manually check $dest_real and $real_src"
+        fi
+        (( error_count++ ))
+        continue
+    fi
 
     print -r -- "Swapped: $shadow_rel -> $real_src"
     (( swap_count++ ))
 done
 
 print -r -- "----------------------------------------------------"
+print -r -- "Totals: $swap_count swapped, $skip_count skipped, $error_count errors"
+if (( nonshadow_count > 0 )); then
+    print -r -- "Ignored $nonshadow_count non-shadow .txt file(s)"
+fi
 print -r -- "Done! Swap complete."
+
+if (( error_count > 0 )); then
+    exit 1
+fi
+exit 0
