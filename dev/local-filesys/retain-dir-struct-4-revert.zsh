@@ -13,8 +13,14 @@
 # .planning/phases/04-local-filesys-revert-tool/04-CONTEXT.md for the full
 # design (D-01 through D-09).
 
+zmodload zsh/zutil
+zparseopts -D -E -F -- -dry-run=opt_dryrun || exit 1
+
+DRY_RUN=0
+(( ${#opt_dryrun} )) && DRY_RUN=1
+
 if [[ $# -lt 2 ]]; then
-    print -u2 -r -- "Usage: $0 <shadow_tree> <target_tree> [<target_tree>...]"
+    print -u2 -r -- "Usage: $0 [--dry-run] <shadow_tree> <target_tree> [<target_tree>...]"
     exit 1
 fi
 
@@ -151,6 +157,12 @@ for shadow in "${shadow_files[@]}"; do
         continue
     fi
 
+    if (( DRY_RUN )); then
+        print -r -- "Would swap: $shadow_rel -> $real_src"
+        (( swap_count++ ))
+        continue
+    fi
+
     if ! mv -- "$real_src" "$dest_real"; then
         print -u2 -r -- "Error: move failed for $shadow_rel ($real_src -> $dest_real)"
         (( error_count++ ))
@@ -179,7 +191,11 @@ print -r -- "Totals: $swap_count swapped, $skip_count skipped, $error_count erro
 if (( nonshadow_count > 0 )); then
     print -r -- "Ignored $nonshadow_count non-shadow .txt file(s)"
 fi
-print -r -- "Done! Swap complete."
+if (( DRY_RUN )); then
+    print -r -- "Dry run complete. No files were moved."
+else
+    print -r -- "Done! Swap complete."
+fi
 
 if (( error_count > 0 )); then
     exit 1
