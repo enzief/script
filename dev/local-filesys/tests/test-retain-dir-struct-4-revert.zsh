@@ -161,6 +161,12 @@ else
     _record 1 "Case A: exit code is 0 (got $exit_a)"
 fi
 
+if [[ "$out_a" != *"Ignored "* ]]; then
+    _record 0 "Case A: no Ignored line when non-shadow count is zero"
+else
+    _record 1 "Case A: no Ignored line when non-shadow count is zero"
+fi
+
 # ======================================================================
 # Case B: non-shadow .txt file is left strictly untouched
 # ======================================================================
@@ -169,7 +175,7 @@ T_B="$FIXROOT/case_b/target"
 mkdir -p "$H_B" "$T_B"
 print -r -- "just some prose, not a shadow" > "$H_B/notes.txt"
 
-"$SCRIPT4" "$H_B" "$T_B" >/dev/null 2>&1
+out_b=$("$SCRIPT4" "$H_B" "$T_B" 2>&1)
 
 assert_path "Case B: non-shadow .txt file is still present after the run" \
     "$H_B/notes.txt" "exists"
@@ -180,6 +186,9 @@ if [[ "$notes_created" == "0" ]]; then
 else
     _record 1 "Case B: no file named 'notes' was created anywhere (found $notes_created)"
 fi
+
+assert_contains "Case B: closing summary reports the Ignored non-shadow count" \
+    "$out_b" "Ignored 1 non-shadow .txt file(s)"
 
 # ======================================================================
 # Case C: destination already occupied -- neither file moves
@@ -225,6 +234,160 @@ mkdir -p "$H_E"
 
 assert_stderr_and_exit "Case E: fewer than two arguments exits 1, stderr-only usage line" \
     1 "Usage: " -- "$SCRIPT4" "$H_E"
+
+# ======================================================================
+# Case F: one run, five shadows -- hash-disambiguated resolution, ambiguous
+# duplicates, hash mismatch, and no-match all in the same batch, proving a
+# sibling shadow always continues past an errored or skipped one (D-03,
+# D-04, D-05, D-06).
+# ======================================================================
+H_F="$FIXROOT/case_f/home"
+T_F="$FIXROOT/case_f/target"
+mkdir -p "$H_F" "$T_F/x" "$T_F/y" "$T_F/p1" "$T_F/p2" "$T_F/q1" "$T_F/q2"
+
+# ok.jpg: clean unique match -- the sibling that must still swap
+make_shadow "ok-content" "$H_F/ok.jpg.txt"
+print -r -- "ok-content" > "$T_F/x/ok.jpg"
+
+# mismatch.jpg: unique name match, but the candidate's content doesn't
+# match the shadow's stored hash
+make_shadow "correct-content" "$H_F/mismatch.jpg.txt"
+print -r -- "wrong-content" > "$T_F/y/mismatch.jpg"
+
+# nomatch.jpg: no candidate anywhere in the target tree
+make_shadow "orphan-content" "$H_F/nomatch.jpg.txt"
+
+# collide-resolve.jpg: two same-named candidates, exactly one matches the
+# stored hash -- resolves and swaps against that one
+make_shadow "resolve-content-A" "$H_F/collide-resolve.jpg.txt"
+print -r -- "resolve-content-A" > "$T_F/p1/collide-resolve.jpg"
+print -r -- "resolve-content-B" > "$T_F/p2/collide-resolve.jpg"
+
+# collide-ambig.jpg: two same-named candidates, identical content, both
+# match the stored hash -- genuine ambiguity, errors out
+make_shadow "ambig-content" "$H_F/collide-ambig.jpg.txt"
+print -r -- "ambig-content" > "$T_F/q1/collide-ambig.jpg"
+print -r -- "ambig-content" > "$T_F/q2/collide-ambig.jpg"
+
+out_f=$("$SCRIPT4" "$H_F" "$T_F" 2>&1)
+exit_f=$?
+
+# ok.jpg swaps successfully
+assert_path "Case F: ok.jpg real file lands at home tree" \
+    "$H_F/ok.jpg" "exists"
+assert_path "Case F: ok.jpg shadow gone from home tree" \
+    "$H_F/ok.jpg.txt" "absent"
+assert_path "Case F: ok.jpg shadow lands at vacated target-tree path" \
+    "$T_F/x/ok.jpg.txt" "exists"
+
+# mismatch.jpg errors, neither file moves
+assert_contains "Case F: hash mismatch reports error naming mismatch.jpg.txt" \
+    "$out_f" "Error: hash mismatch for mismatch.jpg.txt"
+assert_path "Case F: mismatch shadow untouched" \
+    "$H_F/mismatch.jpg.txt" "exists"
+assert_path "Case F: mismatch candidate untouched" \
+    "$T_F/y/mismatch.jpg" "exists"
+
+# nomatch.jpg skips and is reported
+assert_contains "Case F: no-match reports skip line naming nomatch.jpg.txt" \
+    "$out_f" "No matching file found for: nomatch.jpg.txt"
+
+# collide-resolve.jpg resolves to the one hash-matching candidate
+assert_path "Case F: collide-resolve real file lands at home tree" \
+    "$H_F/collide-resolve.jpg" "exists"
+resolve_content=$(<"$H_F/collide-resolve.jpg")
+assert_equal "Case F: collide-resolve real file content is the hash-matching candidate's" \
+    "$resolve_content" "resolve-content-A"
+assert_path "Case F: collide-resolve matching candidate's slot now holds the shadow" \
+    "$T_F/p1/collide-resolve.jpg.txt" "exists"
+assert_path "Case F: collide-resolve non-matching candidate is untouched" \
+    "$T_F/p2/collide-resolve.jpg" "exists"
+
+# collide-ambig.jpg: two hash-matching duplicates -- ambiguous error, neither moves
+assert_contains "Case F: ambiguous duplicates report ambiguous-match error" \
+    "$out_f" "Error: ambiguous match for collide-ambig.jpg.txt"
+assert_path "Case F: collide-ambig candidate 1 untouched" \
+    "$T_F/q1/collide-ambig.jpg" "exists"
+assert_path "Case F: collide-ambig candidate 2 untouched" \
+    "$T_F/q2/collide-ambig.jpg" "exists"
+assert_path "Case F: collide-ambig shadow untouched" \
+    "$H_F/collide-ambig.jpg.txt" "exists"
+
+assert_contains "Case F: closing summary reports Totals" \
+    "$out_f" "Totals: "
+
+if [[ "$exit_f" == "1" ]]; then
+    _record 0 "Case F: run exits 1 when at least one item errored"
+else
+    _record 1 "Case F: run exits 1 when at least one item errored (got $exit_f)"
+fi
+
+# ======================================================================
+# Case G: partially-completed swap is rolled back to its pre-swap state
+# (D-02 invariant: never both, never neither). A fixture-owned `mv` stub is
+# prepended to PATH for this single invocation only -- it delegates to the
+# real `mv` on its first call (the real-file move) and fails on its second
+# (the shadow move), forcing the exact partial-failure this task must
+# recover from.
+# ======================================================================
+H_G="$FIXROOT/case_g/home"
+T_G="$FIXROOT/case_g/target"
+mkdir -p "$H_G" "$T_G/z"
+
+make_shadow "content-f" "$H_G/f.jpg.txt"
+print -r -- "content-f" > "$T_G/z/f.jpg"
+
+STUB_BIN="$FIXROOT/stubbin"
+mkdir -p "$STUB_BIN"
+MV_CALL_COUNT_FILE="$FIXROOT/.mv_call_count"
+print -r -- "0" > "$MV_CALL_COUNT_FILE"
+REAL_MV=$(command -v mv)
+{
+    print -r -- '#!/bin/zsh'
+    print -r -- "count=\$(<\"$MV_CALL_COUNT_FILE\")"
+    print -r -- "(( count++ ))"
+    print -r -- "print -r -- \"\$count\" > \"$MV_CALL_COUNT_FILE\""
+    print -r -- "if (( count == 1 )); then"
+    print -r -- "    exec \"$REAL_MV\" \"\$@\""
+    print -r -- "else"
+    print -r -- "    exit 1"
+    print -r -- "fi"
+} > "$STUB_BIN/mv"
+chmod +x "$STUB_BIN/mv"
+
+err_g=$(env PATH="$STUB_BIN:$PATH" "$SCRIPT4" "$H_G" "$T_G" 2>&1 1>/dev/null)
+
+assert_path "Case G: real file rolled back to its original target-tree path" \
+    "$T_G/z/f.jpg" "exists"
+assert_path "Case G: real file not left at the shadow's home-tree path after rollback" \
+    "$H_G/f.jpg" "absent"
+assert_path "Case G: shadow still at its original home-tree path" \
+    "$H_G/f.jpg.txt" "exists"
+assert_path "Case G: no shadow left behind at the real file's target-tree path" \
+    "$T_G/z/f.jpg.txt" "absent"
+assert_contains "Case G: stderr carries a shadow-move-failure error" \
+    "$err_g" "Error: shadow move failed for "
+
+# ======================================================================
+# Case H: a run containing only skips (no matches, no errors) exits 0
+# ======================================================================
+H_H="$FIXROOT/case_h/home"
+T_H="$FIXROOT/case_h/target"
+mkdir -p "$H_H" "$T_H"
+
+make_shadow "orphan-only-content" "$H_H/orphan.jpg.txt"
+
+out_h=$("$SCRIPT4" "$H_H" "$T_H" 2>&1)
+exit_h=$?
+
+assert_contains "Case H: skip-only run reports the no-match line" \
+    "$out_h" "No matching file found for: orphan.jpg.txt"
+
+if [[ "$exit_h" == "0" ]]; then
+    _record 0 "Case H: skip-only run exits 0"
+else
+    _record 1 "Case H: skip-only run exits 0 (got $exit_h)"
+fi
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"
