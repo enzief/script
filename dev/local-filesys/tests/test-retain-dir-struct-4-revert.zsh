@@ -483,6 +483,137 @@ assert_equal "Case I: dry run Totals equal the real run's Totals over the same f
 assert_stderr_and_exit "Case J: --dry-run alone with no tree args exits 1, stderr-only usage line naming the flag" \
     1 "--dry-run" -- "$SCRIPT4" "--dry-run"
 
+# ======================================================================
+# Case K: true round trip -- SCRIPT4 H T followed by SCRIPT4 T H returns
+# both trees to their exact pre-run state, with the shadow carried across
+# byte-for-byte rather than regenerated (D-08).
+# ======================================================================
+H_K="$FIXROOT/case_k/home"
+T_K="$FIXROOT/case_k/target"
+mkdir -p "$H_K/a" "$T_K/x"
+
+print -r -- "roundtrip-bytes" > "$T_K/x/round.jpg"
+make_shadow "roundtrip-bytes" "$H_K/a/round.jpg.txt"
+
+pre_shadow_bytes_k=$(<"$H_K/a/round.jpg.txt")
+pre_snapshot_h_k=$(tree_snapshot "$H_K")
+pre_snapshot_t_k=$(tree_snapshot "$T_K")
+
+"$SCRIPT4" "$H_K" "$T_K" >/dev/null 2>&1
+
+# Intermediate state: the first hop must put the real file under home and
+# the shadow under target -- a failure here tells you which direction of
+# the round trip broke.
+assert_path "Case K: after first hop, real file is under home tree" \
+    "$H_K/a/round.jpg" "exists"
+assert_path "Case K: after first hop, shadow is under target tree" \
+    "$T_K/x/round.jpg.txt" "exists"
+assert_path "Case K: after first hop, home tree no longer holds the shadow" \
+    "$H_K/a/round.jpg.txt" "absent"
+assert_path "Case K: after first hop, target tree no longer holds the real file" \
+    "$T_K/x/round.jpg" "absent"
+
+"$SCRIPT4" "$T_K" "$H_K" >/dev/null 2>&1
+
+post_snapshot_h_k=$(tree_snapshot "$H_K")
+post_snapshot_t_k=$(tree_snapshot "$T_K")
+post_shadow_bytes_k=$(<"$H_K/a/round.jpg.txt")
+
+assert_equal "Case K: home tree snapshot is identical to its pre-round-trip state" \
+    "$post_snapshot_h_k" "$pre_snapshot_h_k"
+assert_equal "Case K: target tree snapshot is identical to its pre-round-trip state" \
+    "$post_snapshot_t_k" "$pre_snapshot_t_k"
+assert_equal "Case K: shadow's bytes are unchanged after both hops" \
+    "$post_shadow_bytes_k" "$pre_shadow_bytes_k"
+
+# ======================================================================
+# Case L: multiple target trees -- each shadow lands in the specific tree
+# its own match came from, not merely "some" tree (D-03).
+# ======================================================================
+H_L="$FIXROOT/case_l/home"
+T1_L="$FIXROOT/case_l/target1"
+T2_L="$FIXROOT/case_l/target2"
+mkdir -p "$H_L" "$T1_L/one" "$T2_L/two"
+
+make_shadow "content-one" "$H_L/one.jpg.txt"
+print -r -- "content-one" > "$T1_L/one/one.jpg"
+
+make_shadow "content-two" "$H_L/two.jpg.txt"
+print -r -- "content-two" > "$T2_L/two/two.jpg"
+
+"$SCRIPT4" "$H_L" "$T1_L" "$T2_L" >/dev/null 2>&1
+
+assert_path "Case L: one.jpg real file lands at home tree" \
+    "$H_L/one.jpg" "exists"
+assert_path "Case L: one.jpg shadow lands in target1, the tree its match came from" \
+    "$T1_L/one/one.jpg.txt" "exists"
+assert_path "Case L: one.jpg shadow does not land in target2" \
+    "$T2_L/one.jpg.txt" "absent"
+
+assert_path "Case L: two.jpg real file lands at home tree" \
+    "$H_L/two.jpg" "exists"
+assert_path "Case L: two.jpg shadow lands in target2, the tree its match came from" \
+    "$T2_L/two/two.jpg.txt" "exists"
+assert_path "Case L: two.jpg shadow does not land in target1" \
+    "$T1_L/two.jpg.txt" "absent"
+
+# ======================================================================
+# Case M: a basename with identical content colliding across two different
+# target trees is ambiguous -- errors out, nothing moves (D-05 extended
+# across multiple target-tree roots).
+# ======================================================================
+H_M="$FIXROOT/case_m/home"
+T1_M="$FIXROOT/case_m/target1"
+T2_M="$FIXROOT/case_m/target2"
+mkdir -p "$H_M" "$T1_M/p" "$T2_M/p"
+
+make_shadow "cross-ambig-content" "$H_M/cross.jpg.txt"
+print -r -- "cross-ambig-content" > "$T1_M/p/cross.jpg"
+print -r -- "cross-ambig-content" > "$T2_M/p/cross.jpg"
+
+err_m=$("$SCRIPT4" "$H_M" "$T1_M" "$T2_M" 2>&1 1>/dev/null)
+
+assert_contains "Case M: cross-tree basename collision reports ambiguous-match error" \
+    "$err_m" "Error: ambiguous match for cross.jpg.txt"
+assert_path "Case M: shadow untouched after cross-tree ambiguity" \
+    "$H_M/cross.jpg.txt" "exists"
+assert_path "Case M: target1 candidate untouched" \
+    "$T1_M/p/cross.jpg" "exists"
+assert_path "Case M: target2 candidate untouched" \
+    "$T2_M/p/cross.jpg" "exists"
+
+# ======================================================================
+# Case N: directory and file names containing spaces survive a full round
+# trip unchanged, mirroring test-retain-dir-struct.zsh's "space dir" /
+# "file with space.txt" fixture naming.
+# ======================================================================
+H_N="$FIXROOT/case_n/home"
+T_N="$FIXROOT/case_n/target"
+mkdir -p "$H_N/space dir" "$T_N/other space dir"
+
+print -r -- "space content" > "$T_N/other space dir/file with space.jpg"
+make_shadow "space content" "$H_N/space dir/file with space.jpg.txt"
+
+pre_snapshot_h_n=$(tree_snapshot "$H_N")
+pre_snapshot_t_n=$(tree_snapshot "$T_N")
+
+"$SCRIPT4" "$H_N" "$T_N" >/dev/null 2>&1
+
+assert_path "Case N: spaces -- real file lands at home tree path containing a space" \
+    "$H_N/space dir/file with space.jpg" "exists"
+assert_path "Case N: spaces -- shadow lands at target tree path containing a space" \
+    "$T_N/other space dir/file with space.jpg.txt" "exists"
+
+"$SCRIPT4" "$T_N" "$H_N" >/dev/null 2>&1
+
+post_snapshot_h_n=$(tree_snapshot "$H_N")
+post_snapshot_t_n=$(tree_snapshot "$T_N")
+
+assert_equal "Case N: spaces -- home tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_h_n" "$pre_snapshot_h_n"
+assert_equal "Case N: spaces -- target tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_t_n" "$pre_snapshot_t_n"
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
