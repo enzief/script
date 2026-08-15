@@ -19,6 +19,7 @@ Each script does its one job correctly and safely — these scripts move, rename
 - ✓ `local-filesys` scripts behave correctly and consistently — Phase 01 (process-substitution loops replacing subshell-fragile pipes, `print -r --` output standardization across all three scripts, `--dry-run` preview on `retain-dir-struct-2-sorted.zsh`, 29-assertion regression test)
 - ✓ `manga` scripts remain reliable and handle image-dimension detection failures explicitly — Phase 02 (`number-pages.zsh` now prints an `Error:`-prefixed, non-fatal message and a `dim_failures` count in the closing summary instead of a silent-ish `Warning:`; first tracked test for `dev/manga/`, 24-assertion regression suite)
 - ✓ `remote` scripts behave correctly and safely — Phase 03 (REMOTE-01's presumed bug was a misdiagnosis, same pattern as Phase 01, shipped as hardening; `rclone`/`jq` preflight checks and required `REMOTE_NAME`/`REMOTE_PATH` env vars replacing hardcoded literals on script 1; a real stale-variable-inheritance bug found and fixed on script 2 (REMOTE-03); first tracked test for `dev/remote/`, 77-assertion regression suite; security-audited, 15/15 threats closed)
+- ✓ `local-filesys` shadow/real-file revert tool closes the pipeline's long-standing gap (LOCALFS-05) — Phase 04 (`retain-dir-struct-4-revert.zsh`: one bidirectional script, name-first resolution with mandatory hash verification, two-`mv` positional swap, collision disambiguation, partial-swap rollback, `--dry-run` preview, proven true round-trip with zero stored location metadata; 74-assertion regression suite; code review found 2 non-blocking warning-level edge cases in target-tree overlap handling, tracked in `04-REVIEW.md`)
 
 ### Active
 
@@ -72,4 +73,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-13 after Phase 03*
+*Last updated: 2026-08-15 after Phase 04*
