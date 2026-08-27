@@ -614,6 +614,185 @@ assert_equal "Case N: spaces -- home tree snapshot identical to pre-round-trip s
 assert_equal "Case N: spaces -- target tree snapshot identical to pre-round-trip state" \
     "$post_snapshot_t_n" "$pre_snapshot_t_n"
 
+# ======================================================================
+# Case O: real run creates a missing target tree (T-dfl-01/03, no weakened
+# overlap guard involved -- this target tree does not overlap the shadow
+# tree at all, it simply does not exist yet).
+# ======================================================================
+H_O="$FIXROOT/case_o/home"
+T1_O="$FIXROOT/case_o/target1"
+T2_O="$FIXROOT/case_o/target2_missing"
+mkdir -p "$H_O" "$T1_O/x"
+
+# shadow 1: matches a real file already present in target1 (existing tree)
+print -r -- "case-o-content-1" > "$T1_O/x/one.jpg"
+make_shadow "case-o-content-1" "$H_O/one.jpg.txt"
+
+# shadow 2: no match anywhere -- just proves the run completes normally
+make_shadow "case-o-content-2" "$H_O/two.jpg.txt"
+
+"$SCRIPT4" "$H_O" "$T1_O" "$T2_O" >"$FIXROOT/.case_o_stdout" 2>"$FIXROOT/.case_o_stderr"
+exit_o=$?
+out_o=$(<"$FIXROOT/.case_o_stdout")
+err_o=$(<"$FIXROOT/.case_o_stderr")
+
+assert_path "Case O: missing target tree exists on disk after a real run" \
+    "$T2_O" "exists"
+assert_contains "Case O: stdout carries a Created target tree line naming the missing tree" \
+    "$out_o" "Created target tree: $T2_O"
+assert_path "Case O: first shadow's real file landed in the home tree" \
+    "$H_O/one.jpg" "exists"
+assert_path "Case O: first shadow's shadow landed in target1 (existing tree)" \
+    "$T1_O/x/one.jpg.txt" "exists"
+assert_contains "Case O: second shadow reports the no-match skip line" \
+    "$out_o" "No matching file found for: two.jpg.txt"
+
+if [[ -z "$err_o" ]]; then
+    _record 0 "Case O: stderr is empty"
+else
+    _record 1 "Case O: stderr is empty (got: $err_o)"
+fi
+
+if [[ "$exit_o" == "0" ]]; then
+    _record 0 "Case O: exit code is 0"
+else
+    _record 1 "Case O: exit code is 0 (got $exit_o)"
+fi
+
+# ======================================================================
+# Case P: dry run reports but does not create a missing target tree
+# (T-dfl-04). Same fixture shape as Case O.
+# ======================================================================
+H_P="$FIXROOT/case_p/home"
+T1_P="$FIXROOT/case_p/target1"
+T2_P="$FIXROOT/case_p/target2_missing"
+mkdir -p "$H_P" "$T1_P/x"
+
+print -r -- "case-p-content-1" > "$T1_P/x/one.jpg"
+make_shadow "case-p-content-1" "$H_P/one.jpg.txt"
+
+pre_snapshot_h_p=$(tree_snapshot "$H_P")
+pre_snapshot_t1_p=$(tree_snapshot "$T1_P")
+
+"$SCRIPT4" --dry-run "$H_P" "$T1_P" "$T2_P" >"$FIXROOT/.case_p_stdout" 2>"$FIXROOT/.case_p_stderr"
+out_p=$(<"$FIXROOT/.case_p_stdout")
+err_p=$(<"$FIXROOT/.case_p_stderr")
+
+post_snapshot_h_p=$(tree_snapshot "$H_P")
+post_snapshot_t1_p=$(tree_snapshot "$T1_P")
+
+assert_contains "Case P: stdout carries a Would create target tree line naming the missing tree" \
+    "$out_p" "Would create target tree: $T2_P"
+assert_path "Case P: missing target tree is still absent from disk after the dry run" \
+    "$T2_P" "absent"
+
+if [[ "$out_p" != *"Created target tree: "* ]]; then
+    _record 0 "Case P: stdout carries no Created target tree line"
+else
+    _record 1 "Case P: stdout carries no Created target tree line"
+fi
+
+assert_contains "Case P: stdout carries the Would swap preview for the match in the surviving tree" \
+    "$out_p" "Would swap: one.jpg.txt"
+
+if [[ "$err_p" != *"No such file or directory"* ]]; then
+    _record 0 "Case P: stderr contains no No such file or directory noise"
+else
+    _record 1 "Case P: stderr contains no No such file or directory noise (got: $err_p)"
+fi
+
+assert_equal "Case P: home tree snapshot unchanged across the dry run" \
+    "$post_snapshot_h_p" "$pre_snapshot_h_p"
+assert_equal "Case P: existing target tree snapshot unchanged across the dry run" \
+    "$post_snapshot_t1_p" "$pre_snapshot_t1_p"
+
+# ======================================================================
+# Case Q: dry run where every target tree is missing must not fall back
+# to scanning the cwd (T-dfl-02). Bait directory contains a real file with
+# the exact same basename and content hash as the shadow; the run's cwd is
+# switched to the bait directory in a subshell so the outer harness cwd is
+# unaffected.
+# ======================================================================
+H_Q="$FIXROOT/case_q/home"
+T_Q="$FIXROOT/case_q/target_missing"
+BAIT_Q="$FIXROOT/case_q/bait"
+mkdir -p "$H_Q" "$BAIT_Q"
+
+make_shadow "case-q-content" "$H_Q/bait.jpg.txt"
+print -r -- "case-q-content" > "$BAIT_Q/bait.jpg"
+
+(cd "$BAIT_Q" && "$SCRIPT4" --dry-run "$H_Q" "$T_Q" >"$FIXROOT/.case_q_stdout" 2>"$FIXROOT/.case_q_stderr")
+out_q=$(<"$FIXROOT/.case_q_stdout")
+err_q=$(<"$FIXROOT/.case_q_stderr")
+
+if [[ "$out_q" != *"Would swap: "* ]]; then
+    _record 0 "Case Q: stdout carries no Would swap line (cwd bait not matched)"
+else
+    _record 1 "Case Q: stdout carries no Would swap line (cwd bait not matched)"
+fi
+
+assert_contains "Case Q: stdout carries the no-match skip line for the shadow" \
+    "$out_q" "No matching file found for: bait.jpg.txt"
+assert_contains "Case Q: stdout carries the Would create target tree line" \
+    "$out_q" "Would create target tree: $T_Q"
+assert_path "Case Q: missing target tree is still absent from disk" \
+    "$T_Q" "absent"
+assert_path "Case Q: bait file is untouched" \
+    "$BAIT_Q/bait.jpg" "exists"
+
+if [[ "$err_q" != *"No such file or directory"* ]]; then
+    _record 0 "Case Q: stderr contains no No such file or directory noise"
+else
+    _record 1 "Case Q: stderr contains no No such file or directory noise (got: $err_q)"
+fi
+
+# ======================================================================
+# Case R: missing shadow tree still hard-errors, in both modes (unchanged
+# behavior -- must survive the target-tree leniency introduced above).
+# ======================================================================
+T_R="$FIXROOT/case_r/target"
+mkdir -p "$T_R"
+SHADOW_R_MISSING="$FIXROOT/case_r/shadow_missing"
+
+assert_stderr_and_exit "Case R: missing shadow tree exits 1 with Shadow tree not found" \
+    1 "Error: Shadow tree not found: " -- "$SCRIPT4" "$SHADOW_R_MISSING" "$T_R"
+
+assert_stderr_and_exit "Case R: missing shadow tree exits 1 with Shadow tree not found under --dry-run" \
+    1 "Error: Shadow tree not found: " -- "$SCRIPT4" --dry-run "$SHADOW_R_MISSING" "$T_R"
+
+# ======================================================================
+# Case S: overlap guard survives and rejects before creating, whether or
+# not the target tree exists yet (T-dfl-01). Pins the ordering recorded
+# in <design_decision>: the create block must run after the overlap guard.
+# ======================================================================
+
+# S(a): target tree nested under the shadow tree, and that nested path does
+# not itself exist -- must be rejected and never created, in both modes.
+H_SA="$FIXROOT/case_sa/home"
+mkdir -p "$H_SA"
+T_SA_NESTED_MISSING="$H_SA/nested_missing"
+
+assert_stderr_and_exit "Case S(a): target nested under shadow tree, not yet existing, exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" "$H_SA" "$T_SA_NESTED_MISSING"
+
+assert_path "Case S(a): rejected nested target tree is still absent from disk" \
+    "$T_SA_NESTED_MISSING" "absent"
+
+assert_stderr_and_exit "Case S(a): same rejection holds under --dry-run" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --dry-run "$H_SA" "$T_SA_NESTED_MISSING"
+
+assert_path "Case S(a): rejected nested target tree is still absent from disk after --dry-run" \
+    "$T_SA_NESTED_MISSING" "absent"
+
+# S(b): target tree is an existing directory that is a parent of the
+# shadow tree.
+T_SB_PARENT="$FIXROOT/case_sb"
+H_SB="$T_SB_PARENT/home"
+mkdir -p "$H_SB"
+
+assert_stderr_and_exit "Case S(b): target tree that is a parent of the shadow tree exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" "$H_SB" "$T_SB_PARENT"
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
