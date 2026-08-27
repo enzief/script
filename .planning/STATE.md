@@ -105,14 +105,15 @@ None yet.
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260805-ety | Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory, mirroring sibling project byse's convention. Update all path references across the repo including committed Phase 1 plans. | 2026-08-05 | 85a8fed | [260805-ety-move-local-filesys-manga-and-remote-into](./quick/260805-ety-move-local-filesys-manga-and-remote-into/) |
-| 260808-8a3 | Adopt kubuntu reinstall scripts from /media/enzief/wdhdd/lubuntu/ into dev/system/, fixing bugs (critical: unmounted-drive guard on backup-to-wdhdd.zsh) and aligning style with repo conventions, while keeping install-essentials.sh and clone-clean-repos.sh as bash and flipping the repo to be the source of truth synced onto the drive. | 2026-08-08 | 189d268 | [260808-8a3-adopt-kubuntu-reinstall-scripts-from-med](./quick/260808-8a3-adopt-kubuntu-reinstall-scripts-from-med/) |
-| 260808-8v1 | Refresh dev/system/backup-to-wdhdd.zsh and install-essentials.sh to reflect this machine's actual post-migration Kubuntu/Plasma state: fixed dead .config/nvm path (real path ~/.nvm), dropped unused VS Code entry, added curated KDE Plasma config coverage (panel layout, shortcuts, window rules, per-app settings, power/lock rc files), switched Claude Code install to the native installer, and skipped kdeconnect/klipper as disclosure risks on unencrypted exFAT. | 2026-08-08 | ae9a568 | [260808-8v1-update-dev-system-install-essentials-sh-](./quick/260808-8v1-update-dev-system-install-essentials-sh-/) |
-| 4 | Fix dev/system/clone-clean-repos.sh: removed --single-branch from git clone so all remote branches are fetched, not just each repo's default ref | 2026-08-08 | f25ce45 | — |
-| 260809-7bf | Add SSH/SFTP server setup to dev/system/install-essentials.sh (openssh-server + systemctl enable --now ssh + guarded ufw rule, no config edits/no chroot) for general remote file access on every future reinstall, synced REINSTALL_INSTRUCTIONS.txt, and applied live on this machine — confirmed working via sftp to 127.0.0.1. | 2026-08-09 | 929e38b | [260809-7bf-add-sftp-ssh-server-setup-to-dev-system-](./quick/260809-7bf-add-sftp-ssh-server-setup-to-dev-system-/) |
-| 260827-7h9 | Create dev/local-filesys/README.md documenting the shadow/rearrange/revert workflow | 2026-08-27 | c8ceb36 | [260827-7h9-create-dev-local-filesys-readme-md-docum](./quick/260827-7h9-create-dev-local-filesys-readme-md-docum/) |
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260805-ety | Move local-filesys/, manga/, and remote/ into a new top-level dev/ directory, mirroring sibling project byse's convention. Update all path references across the repo including committed Phase 1 plans. | 2026-08-05 | 85a8fed | | [260805-ety-move-local-filesys-manga-and-remote-into](./quick/260805-ety-move-local-filesys-manga-and-remote-into/) |
+| 260808-8a3 | Adopt kubuntu reinstall scripts from /media/enzief/wdhdd/lubuntu/ into dev/system/, fixing bugs (critical: unmounted-drive guard on backup-to-wdhdd.zsh) and aligning style with repo conventions, while keeping install-essentials.sh and clone-clean-repos.sh as bash and flipping the repo to be the source of truth synced onto the drive. | 2026-08-08 | 189d268 | | [260808-8a3-adopt-kubuntu-reinstall-scripts-from-med](./quick/260808-8a3-adopt-kubuntu-reinstall-scripts-from-med/) |
+| 260808-8v1 | Refresh dev/system/backup-to-wdhdd.zsh and install-essentials.sh to reflect this machine's actual post-migration Kubuntu/Plasma state: fixed dead .config/nvm path (real path ~/.nvm), dropped unused VS Code entry, added curated KDE Plasma config coverage (panel layout, shortcuts, window rules, per-app settings, power/lock rc files), switched Claude Code install to the native installer, and skipped kdeconnect/klipper as disclosure risks on unencrypted exFAT. | 2026-08-08 | ae9a568 | | [260808-8v1-update-dev-system-install-essentials-sh-](./quick/260808-8v1-update-dev-system-install-essentials-sh-/) |
+| 4 | Fix dev/system/clone-clean-repos.sh: removed --single-branch from git clone so all remote branches are fetched, not just each repo's default ref | 2026-08-08 | f25ce45 | | — |
+| 260809-7bf | Add SSH/SFTP server setup to dev/system/install-essentials.sh (openssh-server + systemctl enable --now ssh + guarded ufw rule, no config edits/no chroot) for general remote file access on every future reinstall, synced REINSTALL_INSTRUCTIONS.txt, and applied live on this machine — confirmed working via sftp to 127.0.0.1. | 2026-08-09 | 929e38b | | [260809-7bf-add-sftp-ssh-server-setup-to-dev-system-](./quick/260809-7bf-add-sftp-ssh-server-setup-to-dev-system-/) |
+| 260827-7h9 | Create dev/local-filesys/README.md documenting the shadow/rearrange/revert workflow | 2026-08-27 | c8ceb36 | | [260827-7h9-create-dev-local-filesys-readme-md-docum](./quick/260827-7h9-create-dev-local-filesys-readme-md-docum/) |
+| 260827-dfl | Fix dev/local-filesys/retain-dir-struct-4-revert.zsh so it creates missing target tree directories instead of erroring | 2026-08-27 | f2801bb | Verified | [260827-dfl-fix-dev-local-filesys-retain-dir-struct-](./quick/260827-dfl-fix-dev-local-filesys-retain-dir-struct-/) |
 
 ## Deferred Items
 
@@ -129,4 +130,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-15T13:29:15.317Z
 Stopped at: Completed 04-02-PLAN.md
 Resume file: None
-Last activity: 2026-08-27 - Completed quick task 260827-7h9: Create dev/local-filesys/README.md documenting the shadow/rearrange/revert workflow
+Last activity: 2026-08-27 - Completed quick task 260827-dfl: Fix dev/local-filesys/retain-dir-struct-4-revert.zsh so it creates missing target tree directories instead of erroring
