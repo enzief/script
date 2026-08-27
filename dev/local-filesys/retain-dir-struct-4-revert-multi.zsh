@@ -1,58 +1,126 @@
 #!/bin/zsh
 
-# retain-dir-struct-4-revert.zsh -- bidirectional shadow/real-file swap.
+# retain-dir-struct-4-revert-multi.zsh -- bidirectional shadow/real-file swap.
 #
-# Resolves each hash-only shadow .txt file under <shadow_tree> (the format
-# retain-dir-struct-1.zsh produces: sha256sum output redirected to a .txt
-# file named "<relpath>.txt") against the real file it stands in for, by
-# searching one or more <target_tree> roots. The real file's name (minus the
-# .txt suffix) locates candidates; the shadow's stored hash verifies the
-# match. On a verified match, the shadow and the real file swap positions
-# via two `mv` calls -- the shadow is relocated byte-for-byte, never deleted
-# and regenerated. See
+# Resolves each hash-only shadow .txt file found under one or more --shadow
+# roots (the format retain-dir-struct-1.zsh produces: sha256sum output
+# redirected to a .txt file named "<relpath>.txt") against the real file it
+# stands in for, by searching one or more --target roots. The real file's
+# name (minus the .txt suffix) locates candidates; the shadow's stored hash
+# verifies the match. On a verified match, the shadow and the real file swap
+# positions via two `mv` calls -- the shadow is relocated byte-for-byte,
+# never deleted and regenerated. See
 # .planning/phases/04-local-filesys-revert-tool/04-CONTEXT.md for the full
 # design (D-01 through D-09).
 
 zmodload zsh/zutil
-zparseopts -D -E -F -- -dry-run=opt_dryrun || exit 1
+zparseopts -D -E -F -- -shadow+:=opt_shadow -target+:=opt_target -dry-run=opt_dryrun || exit 1
 
 DRY_RUN=0
 (( ${#opt_dryrun} )) && DRY_RUN=1
 
-if [[ $# -lt 2 ]]; then
-    print -u2 -r -- "Usage: $0 [--dry-run] <shadow_tree> <target_tree> [<target_tree>...]"
+# usage() -- printed on stderr, single line, then exits 1. Called by each
+# of the three guards below (empty --shadow, empty --target, leftover bare
+# positional word).
+usage() {
+    print -u2 -r -- "Usage: $0 [--dry-run] --shadow <dir> [--shadow <dir>...] --target <dir> [--target <dir>...]"
     exit 1
-fi
+}
 
-SHADOW_TREE=${1%/}
-shift
+# opt_shadow/opt_target hold ALTERNATING flag/value pairs from zparseopts
+# +:= (e.g. --shadow /a --shadow /b => (--shadow /a --shadow /b)), so
+# values live at indices 2, 4, 6, ... -- extraction strides by 2 rather
+# than copying the array wholesale, which would treat the literal string
+# "--shadow" as a tree root.
+typeset -a SHADOW_TREES
+SHADOW_TREES=()
+for (( i = 2; i <= ${#opt_shadow[@]}; i += 2 )); do
+    SHADOW_TREES+=("${opt_shadow[$i]%/}")
+done
 
 typeset -a TARGET_TREES
 TARGET_TREES=()
-for t in "$@"; do
-    TARGET_TREES+=("${t%/}")
+for (( i = 2; i <= ${#opt_target[@]}; i += 2 )); do
+    TARGET_TREES+=("${opt_target[$i]%/}")
 done
 
-[[ ! -d "$SHADOW_TREE" ]] && { print -u2 -r -- "Error: Shadow tree not found: $SHADOW_TREE"; exit 1 }
+(( ${#SHADOW_TREES[@]} == 0 )) && usage
+(( ${#TARGET_TREES[@]} == 0 )) && usage
+# zparseopts leaves unrecognised bare words in $@ without erroring -- a
+# leftover here means a caller typed the old positional form and would
+# otherwise get a silent partial run over only the flagged roots.
+(( $# > 0 )) && usage
+
+# Shadow roots are read-only sources and are never auto-created.
+for s in "${SHADOW_TREES[@]}"; do
+    [[ ! -d "$s" ]] && { print -u2 -r -- "Error: Shadow tree not found: $s"; exit 1 }
+done
 
 # Resolve every root to its canonical absolute path before the overlap
 # check -- two different relative spellings of the same directory must not
 # slip past this guard. -m tolerates a target root that does not exist yet
 # (plain realpath -- would fail and store an empty string, silently
-# weakening the overlap comparison below); the shadow tree stays strict
-# since its existence is still a hard prerequisite.
-SHADOW_TREE_ABS=$(realpath -- "$SHADOW_TREE")
+# weakening the overlap comparison below); shadow roots stay strict since
+# their existence is already a hard prerequisite, enforced above.
+typeset -a SHADOW_TREES_ABS
+SHADOW_TREES_ABS=()
+for s in "${SHADOW_TREES[@]}"; do
+    SHADOW_TREES_ABS+=("$(realpath -- "$s")")
+done
+
 typeset -a TARGET_TREES_ABS
 TARGET_TREES_ABS=()
 for t in "${TARGET_TREES[@]}"; do
     TARGET_TREES_ABS+=("$(realpath -m -- "$t")")
 done
 
-for t in "${TARGET_TREES_ABS[@]}"; do
-    if [[ "$t" == "$SHADOW_TREE_ABS" || "$t/" == "$SHADOW_TREE_ABS/"* || "$SHADOW_TREE_ABS/" == "$t/"* ]]; then
-        print -u2 -r -- "Error: Overlapping tree roots: $SHADOW_TREE_ABS and $t"
-        exit 1
-    fi
+# roots_overlap <abs_a> <abs_b> -- true when the two are equal or either
+# contains the other.
+roots_overlap() {
+    local a="$1" b="$2"
+    [[ "$a" == "$b" || "$a/" == "$b/"* || "$b/" == "$a/"* ]]
+}
+
+# reject_overlap <abs_a> <abs_b> -- prints the shared error and exits 1.
+reject_overlap() {
+    print -u2 -r -- "Error: Overlapping tree roots: $1 and $2"
+    exit 1
+}
+
+# Axis 1: shadow vs shadow -- nested or equal shadow roots would enumerate
+# the same shadow file twice: the first pass swaps it, the second pass
+# reads a now-vacated source (awk noise, empty stored_hash) and finds the
+# destination occupied, so a legitimate swap is reported as an error.
+for (( i = 1; i <= ${#SHADOW_TREES_ABS[@]}; i++ )); do
+    for (( j = i + 1; j <= ${#SHADOW_TREES_ABS[@]}; j++ )); do
+        if roots_overlap "${SHADOW_TREES_ABS[$i]}" "${SHADOW_TREES_ABS[$j]}"; then
+            reject_overlap "${SHADOW_TREES_ABS[$i]}" "${SHADOW_TREES_ABS[$j]}"
+        fi
+    done
+done
+
+# Axis 2: target vs target -- nested or equal target roots double-count
+# every basename in name_count, pushing otherwise-unique matches down the
+# collision branch where the same physical file appears twice among the
+# candidates and both hash-match, producing a false ambiguous-match error.
+for (( i = 1; i <= ${#TARGET_TREES_ABS[@]}; i++ )); do
+    for (( j = i + 1; j <= ${#TARGET_TREES_ABS[@]}; j++ )); do
+        if roots_overlap "${TARGET_TREES_ABS[$i]}" "${TARGET_TREES_ABS[$j]}"; then
+            reject_overlap "${TARGET_TREES_ABS[$i]}" "${TARGET_TREES_ABS[$j]}"
+        fi
+    done
+done
+
+# Axis 3: shadow vs target (full cross-product, shadow first in the
+# rejection message, matching today's argument order) -- a shadow root
+# inside a target root (or vice versa) makes shadow files themselves swap
+# candidates and can relocate a shadow onto its own tree.
+for s in "${SHADOW_TREES_ABS[@]}"; do
+    for t in "${TARGET_TREES_ABS[@]}"; do
+        if roots_overlap "$s" "$t"; then
+            reject_overlap "$s" "$t"
+        fi
+    done
 done
 
 # A target tree that does not exist yet is a legitimate swap destination --
@@ -83,19 +151,31 @@ done
 
 # --- What counts as a shadow: a .txt file whose first field is a 64-char
 # lowercase hex hash. Anything else (a real prose .txt data file elsewhere
-# in the project) is left strictly untouched.
-typeset -a shadow_files
+# in the project) is left strictly untouched. Discovery runs once per
+# shadow root; shadow_roots is appended in lockstep with shadow_files so
+# the main loop below can strip shadow_rel against the root each shadow
+# actually came from (display-only; never used to build a destination
+# path). nonshadow_count is declared once before the outer loop, so the
+# tally accumulates across every shadow root rather than resetting per
+# root. No empty-array guard is needed here: SHADOW_TREES is non-empty by
+# the usage guard above and every element exists by the existence check
+# above, so find always receives exactly one real path per iteration.
+typeset -a shadow_files shadow_roots
 shadow_files=()
+shadow_roots=()
 nonshadow_count=0
 
-while IFS= read -r -d '' candidate; do
-    first_field=$(awk 'NR==1{print $1; exit}' "$candidate")
-    if [[ "$first_field" =~ '^[0-9a-f]{64}$' ]]; then
-        shadow_files+=("$candidate")
-    else
-        (( nonshadow_count++ ))
-    fi
-done < <(find "$SHADOW_TREE" -type f -name "*.txt" -print0)
+for s in "${SHADOW_TREES[@]}"; do
+    while IFS= read -r -d '' candidate; do
+        first_field=$(awk 'NR==1{print $1; exit}' "$candidate")
+        if [[ "$first_field" =~ '^[0-9a-f]{64}$' ]]; then
+            shadow_files+=("$candidate")
+            shadow_roots+=("$s")
+        else
+            (( nonshadow_count++ ))
+        fi
+    done < <(find "$s" -type f -name "*.txt" -print0)
+done
 
 # --- Name index over all target trees, built in one pass before the shadow
 # loop. Keyed by basename, not relative path: after a swap the shadow and
@@ -114,15 +194,17 @@ if (( ${#TARGET_TREES_EXISTING[@]} )); then
     done < <(find "${TARGET_TREES_EXISTING[@]}" -type f -print0)
 fi
 
-print -r -- "Reverting shadows from '$SHADOW_TREE' against ${#TARGET_TREES[@]} target tree(s)..."
+print -r -- "Reverting shadows from ${#SHADOW_TREES[@]} shadow tree(s) against ${#TARGET_TREES[@]} target tree(s)..."
 print -r -- "----------------------------------------------------"
 
 swap_count=0
 skip_count=0
 error_count=0
 
-for shadow in "${shadow_files[@]}"; do
-    shadow_rel="${shadow#$SHADOW_TREE/}"
+for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
+    shadow="${shadow_files[$i]}"
+    shadow_root="${shadow_roots[$i]}"
+    shadow_rel="${shadow#$shadow_root/}"
     stored_hash=$(awk 'NR==1{print $1; exit}' "$shadow")
     dest_real="${shadow%.txt}"
     base="${dest_real:t}"
