@@ -1,10 +1,13 @@
 #!/bin/zsh
 
-# Regression test for retain-dir-struct-4-revert-multi.zsh -- the bidirectional
-# shadow/real-file swap tool. Covers name-first resolution, mandatory hash
-# verification, the two-mv positional exchange, and every failure mode
-# (no-match, hash mismatch, ambiguous duplicates, occupied destination,
-# partial-swap rollback).
+# Regression test for retain-dir-struct-4-revert-multi.zsh -- the
+# bidirectional shadow/real-file swap tool, generalized to N shadow roots
+# and N target roots via repeated --shadow/--target flags. Covers
+# name-first resolution, mandatory hash verification, the two-mv exchange,
+# every failure mode (no-match, hash mismatch, ambiguous duplicates,
+# occupied destination, partial-swap rollback), multi-shadow discovery and
+# cross-root tally aggregation, and all three overlap axes (shadow-vs-shadow,
+# target-vs-target, shadow-vs-target).
 #
 # Manual assert-style test (TESTING.md Option 3) -- no external test framework.
 # Run directly: ./dev/local-filesys/tests/test-retain-dir-struct-4-revert-multi.zsh
@@ -146,7 +149,7 @@ make_shadow "photo-bytes" "$H_A/a/photo.jpg.txt"
 pre_real_hash=$(sha256sum "$T_A/x/photo.jpg" | awk '{print $1}')
 pre_shadow_bytes=$(<"$H_A/a/photo.jpg.txt")
 
-out_a=$("$SCRIPT4" "$H_A" "$T_A" 2>&1)
+out_a=$("$SCRIPT4" --shadow "$H_A" --target "$T_A" 2>&1)
 exit_a=$?
 
 assert_path "Case A: real file lands at the shadow's exact home-tree path" \
@@ -189,7 +192,7 @@ T_B="$FIXROOT/case_b/target"
 mkdir -p "$H_B" "$T_B"
 print -r -- "just some prose, not a shadow" > "$H_B/notes.txt"
 
-out_b=$("$SCRIPT4" "$H_B" "$T_B" 2>&1)
+out_b=$("$SCRIPT4" --shadow "$H_B" --target "$T_B" 2>&1)
 
 assert_path "Case B: non-shadow .txt file is still present after the run" \
     "$H_B/notes.txt" "exists"
@@ -217,7 +220,7 @@ print -r -- "dup-content" > "$T_C/y/dup.jpg"
 
 pre_occupied_bytes=$(<"$H_C/b/dup.jpg")
 
-err_c=$("$SCRIPT4" "$H_C" "$T_C" 2>&1 1>/dev/null)
+err_c=$("$SCRIPT4" --shadow "$H_C" --target "$T_C" 2>&1 1>/dev/null)
 
 assert_contains "Case C: stderr carries a destination-already-exists error" \
     "$err_c" "Error: destination already exists for "
@@ -232,22 +235,32 @@ assert_path "Case C: shadow file itself is untouched" \
     "$H_C/b/dup.jpg.txt" "exists"
 
 # ======================================================================
-# Case D: overlapping tree roots -- rejected before any processing
+# Case D: overlapping tree roots (shadow-vs-target axis) -- rejected before
+# any processing
 # ======================================================================
 H_D="$FIXROOT/case_d/home"
 mkdir -p "$H_D"
 
-assert_stderr_and_exit "Case D: same directory as both shadow and target tree exits 1, stderr-only" \
-    1 "Error: " -- "$SCRIPT4" "$H_D" "$H_D"
+assert_stderr_and_exit "Case D: same directory as both --shadow and --target exits 1, stderr-only" \
+    1 "Error: " -- "$SCRIPT4" --shadow "$H_D" --target "$H_D"
 
 # ======================================================================
-# Case E: fewer than two arguments -- usage error
+# Case E: usage errors -- repurposed from the old "fewer than two
+# arguments" case (no meaning under the flag interface). Each sub-case
+# is exit 1, stderr-only, stderr contains "Usage: ".
 # ======================================================================
 H_E="$FIXROOT/case_e/home"
-mkdir -p "$H_E"
+T_E="$FIXROOT/case_e/target"
+mkdir -p "$H_E" "$T_E"
 
-assert_stderr_and_exit "Case E: fewer than two arguments exits 1, stderr-only usage line" \
-    1 "Usage: " -- "$SCRIPT4" "$H_E"
+assert_stderr_and_exit "Case E(a): --shadow with no --target at all exits 1 with Usage" \
+    1 "Usage: " -- "$SCRIPT4" --shadow "$H_E"
+
+assert_stderr_and_exit "Case E(b): --target with no --shadow at all exits 1 with Usage" \
+    1 "Usage: " -- "$SCRIPT4" --target "$T_E"
+
+assert_stderr_and_exit "Case E(c): valid flag pair plus a trailing bare positional word exits 1 with Usage" \
+    1 "Usage: " -- "$SCRIPT4" --shadow "$H_E" --target "$T_E" "leftover"
 
 # ======================================================================
 # Case F: one run, five shadows -- hash-disambiguated resolution, ambiguous
@@ -283,7 +296,7 @@ make_shadow "ambig-content" "$H_F/collide-ambig.jpg.txt"
 print -r -- "ambig-content" > "$T_F/q1/collide-ambig.jpg"
 print -r -- "ambig-content" > "$T_F/q2/collide-ambig.jpg"
 
-out_f=$("$SCRIPT4" "$H_F" "$T_F" 2>&1)
+out_f=$("$SCRIPT4" --shadow "$H_F" --target "$T_F" 2>&1)
 exit_f=$?
 
 # ok.jpg swaps successfully
@@ -369,7 +382,7 @@ REAL_MV=$(command -v mv)
 } > "$STUB_BIN/mv"
 chmod +x "$STUB_BIN/mv"
 
-err_g=$(env PATH="$STUB_BIN:$PATH" "$SCRIPT4" "$H_G" "$T_G" 2>&1 1>/dev/null)
+err_g=$(env PATH="$STUB_BIN:$PATH" "$SCRIPT4" --shadow "$H_G" --target "$T_G" 2>&1 1>/dev/null)
 
 assert_path "Case G: real file rolled back to its original target-tree path" \
     "$T_G/z/f.jpg" "exists"
@@ -391,7 +404,7 @@ mkdir -p "$H_H" "$T_H"
 
 make_shadow "orphan-only-content" "$H_H/orphan.jpg.txt"
 
-out_h=$("$SCRIPT4" "$H_H" "$T_H" 2>&1)
+out_h=$("$SCRIPT4" --shadow "$H_H" --target "$T_H" 2>&1)
 exit_h=$?
 
 assert_contains "Case H: skip-only run reports the no-match line" \
@@ -431,7 +444,7 @@ print -r -- "ambig-i-content" > "$T_I/q2/ambig.jpg"
 pre_snapshot_h_i=$(tree_snapshot "$H_I")
 pre_snapshot_t_i=$(tree_snapshot "$T_I")
 
-out_dry_i=$("$SCRIPT4" --dry-run "$H_I" "$T_I" 2>&1)
+out_dry_i=$("$SCRIPT4" --dry-run --shadow "$H_I" --target "$T_I" 2>&1)
 exit_dry_i=$?
 
 post_snapshot_h_i=$(tree_snapshot "$H_I")
@@ -471,22 +484,23 @@ fi
 # are still in their pre-run state. The real run's Totals must equal the
 # dry run's exactly (preview accuracy, not just preview presence).
 dry_totals_i=$(print -r -- "$out_dry_i" | grep '^Totals: ')
-out_real_i=$("$SCRIPT4" "$H_I" "$T_I" 2>&1)
+out_real_i=$("$SCRIPT4" --shadow "$H_I" --target "$T_I" 2>&1)
 real_totals_i=$(print -r -- "$out_real_i" | grep '^Totals: ')
 assert_equal "Case I: dry run Totals equal the real run's Totals over the same fixture" \
     "$dry_totals_i" "$real_totals_i"
 
 # ======================================================================
-# Case J: --dry-run with no tree arguments -- usage error, stderr-only,
-# empty stdout, exit 1.
+# Case J: --dry-run with no --shadow and no --target -- usage error,
+# stderr-only, empty stdout, exit 1.
 # ======================================================================
-assert_stderr_and_exit "Case J: --dry-run alone with no tree args exits 1, stderr-only usage line naming the flag" \
-    1 "--dry-run" -- "$SCRIPT4" "--dry-run"
+assert_stderr_and_exit "Case J: --dry-run alone with no --shadow/--target exits 1, stderr-only usage line" \
+    1 "Usage: " -- "$SCRIPT4" --dry-run
 
 # ======================================================================
-# Case K: true round trip -- SCRIPT4 H T followed by SCRIPT4 T H returns
-# both trees to their exact pre-run state, with the shadow carried across
-# byte-for-byte rather than regenerated (D-08).
+# Case K: true round trip -- SCRIPT4 --shadow H --target T followed by
+# SCRIPT4 --shadow T --target H returns both trees to their exact pre-run
+# state, with the shadow carried across byte-for-byte rather than
+# regenerated (D-08).
 # ======================================================================
 H_K="$FIXROOT/case_k/home"
 T_K="$FIXROOT/case_k/target"
@@ -499,7 +513,7 @@ pre_shadow_bytes_k=$(<"$H_K/a/round.jpg.txt")
 pre_snapshot_h_k=$(tree_snapshot "$H_K")
 pre_snapshot_t_k=$(tree_snapshot "$T_K")
 
-"$SCRIPT4" "$H_K" "$T_K" >/dev/null 2>&1
+"$SCRIPT4" --shadow "$H_K" --target "$T_K" >/dev/null 2>&1
 
 # Intermediate state: the first hop must put the real file under home and
 # the shadow under target -- a failure here tells you which direction of
@@ -513,7 +527,8 @@ assert_path "Case K: after first hop, home tree no longer holds the shadow" \
 assert_path "Case K: after first hop, target tree no longer holds the real file" \
     "$T_K/x/round.jpg" "absent"
 
-"$SCRIPT4" "$T_K" "$H_K" >/dev/null 2>&1
+# Second hop swaps which root carries --shadow and which carries --target.
+"$SCRIPT4" --shadow "$T_K" --target "$H_K" >/dev/null 2>&1
 
 post_snapshot_h_k=$(tree_snapshot "$H_K")
 post_snapshot_t_k=$(tree_snapshot "$T_K")
@@ -541,7 +556,7 @@ print -r -- "content-one" > "$T1_L/one/one.jpg"
 make_shadow "content-two" "$H_L/two.jpg.txt"
 print -r -- "content-two" > "$T2_L/two/two.jpg"
 
-"$SCRIPT4" "$H_L" "$T1_L" "$T2_L" >/dev/null 2>&1
+"$SCRIPT4" --shadow "$H_L" --target "$T1_L" --target "$T2_L" >/dev/null 2>&1
 
 assert_path "Case L: one.jpg real file lands at home tree" \
     "$H_L/one.jpg" "exists"
@@ -571,7 +586,7 @@ make_shadow "cross-ambig-content" "$H_M/cross.jpg.txt"
 print -r -- "cross-ambig-content" > "$T1_M/p/cross.jpg"
 print -r -- "cross-ambig-content" > "$T2_M/p/cross.jpg"
 
-err_m=$("$SCRIPT4" "$H_M" "$T1_M" "$T2_M" 2>&1 1>/dev/null)
+err_m=$("$SCRIPT4" --shadow "$H_M" --target "$T1_M" --target "$T2_M" 2>&1 1>/dev/null)
 
 assert_contains "Case M: cross-tree basename collision reports ambiguous-match error" \
     "$err_m" "Error: ambiguous match for cross.jpg.txt"
@@ -597,14 +612,14 @@ make_shadow "space content" "$H_N/space dir/file with space.jpg.txt"
 pre_snapshot_h_n=$(tree_snapshot "$H_N")
 pre_snapshot_t_n=$(tree_snapshot "$T_N")
 
-"$SCRIPT4" "$H_N" "$T_N" >/dev/null 2>&1
+"$SCRIPT4" --shadow "$H_N" --target "$T_N" >/dev/null 2>&1
 
 assert_path "Case N: spaces -- real file lands at home tree path containing a space" \
     "$H_N/space dir/file with space.jpg" "exists"
 assert_path "Case N: spaces -- shadow lands at target tree path containing a space" \
     "$T_N/other space dir/file with space.jpg.txt" "exists"
 
-"$SCRIPT4" "$T_N" "$H_N" >/dev/null 2>&1
+"$SCRIPT4" --shadow "$T_N" --target "$H_N" >/dev/null 2>&1
 
 post_snapshot_h_n=$(tree_snapshot "$H_N")
 post_snapshot_t_n=$(tree_snapshot "$T_N")
@@ -631,7 +646,7 @@ make_shadow "case-o-content-1" "$H_O/one.jpg.txt"
 # shadow 2: no match anywhere -- just proves the run completes normally
 make_shadow "case-o-content-2" "$H_O/two.jpg.txt"
 
-"$SCRIPT4" "$H_O" "$T1_O" "$T2_O" >"$FIXROOT/.case_o_stdout" 2>"$FIXROOT/.case_o_stderr"
+"$SCRIPT4" --shadow "$H_O" --target "$T1_O" --target "$T2_O" >"$FIXROOT/.case_o_stdout" 2>"$FIXROOT/.case_o_stderr"
 exit_o=$?
 out_o=$(<"$FIXROOT/.case_o_stdout")
 err_o=$(<"$FIXROOT/.case_o_stderr")
@@ -674,7 +689,7 @@ make_shadow "case-p-content-1" "$H_P/one.jpg.txt"
 pre_snapshot_h_p=$(tree_snapshot "$H_P")
 pre_snapshot_t1_p=$(tree_snapshot "$T1_P")
 
-"$SCRIPT4" --dry-run "$H_P" "$T1_P" "$T2_P" >"$FIXROOT/.case_p_stdout" 2>"$FIXROOT/.case_p_stderr"
+"$SCRIPT4" --dry-run --shadow "$H_P" --target "$T1_P" --target "$T2_P" >"$FIXROOT/.case_p_stdout" 2>"$FIXROOT/.case_p_stderr"
 out_p=$(<"$FIXROOT/.case_p_stdout")
 err_p=$(<"$FIXROOT/.case_p_stderr")
 
@@ -721,7 +736,7 @@ mkdir -p "$H_Q" "$BAIT_Q"
 make_shadow "case-q-content" "$H_Q/bait.jpg.txt"
 print -r -- "case-q-content" > "$BAIT_Q/bait.jpg"
 
-(cd "$BAIT_Q" && "$SCRIPT4" --dry-run "$H_Q" "$T_Q" >"$FIXROOT/.case_q_stdout" 2>"$FIXROOT/.case_q_stderr")
+(cd "$BAIT_Q" && "$SCRIPT4" --dry-run --shadow "$H_Q" --target "$T_Q" >"$FIXROOT/.case_q_stdout" 2>"$FIXROOT/.case_q_stderr")
 out_q=$(<"$FIXROOT/.case_q_stdout")
 err_q=$(<"$FIXROOT/.case_q_stderr")
 
@@ -755,15 +770,16 @@ mkdir -p "$T_R"
 SHADOW_R_MISSING="$FIXROOT/case_r/shadow_missing"
 
 assert_stderr_and_exit "Case R: missing shadow tree exits 1 with Shadow tree not found" \
-    1 "Error: Shadow tree not found: " -- "$SCRIPT4" "$SHADOW_R_MISSING" "$T_R"
+    1 "Error: Shadow tree not found: " -- "$SCRIPT4" --shadow "$SHADOW_R_MISSING" --target "$T_R"
 
 assert_stderr_and_exit "Case R: missing shadow tree exits 1 with Shadow tree not found under --dry-run" \
-    1 "Error: Shadow tree not found: " -- "$SCRIPT4" --dry-run "$SHADOW_R_MISSING" "$T_R"
+    1 "Error: Shadow tree not found: " -- "$SCRIPT4" --dry-run --shadow "$SHADOW_R_MISSING" --target "$T_R"
 
 # ======================================================================
-# Case S: overlap guard survives and rejects before creating, whether or
-# not the target tree exists yet (T-dfl-01). Pins the ordering recorded
-# in <design_decision>: the create block must run after the overlap guard.
+# Case S: overlap guard (shadow-vs-target axis) survives and rejects
+# before creating, whether or not the target tree exists yet (T-dfl-01).
+# Pins the ordering recorded in <design_decision>: the create block must
+# run after the overlap guard.
 # ======================================================================
 
 # S(a): target tree nested under the shadow tree, and that nested path does
@@ -773,13 +789,13 @@ mkdir -p "$H_SA"
 T_SA_NESTED_MISSING="$H_SA/nested_missing"
 
 assert_stderr_and_exit "Case S(a): target nested under shadow tree, not yet existing, exits 1 with Overlapping tree roots" \
-    1 "Error: Overlapping tree roots" -- "$SCRIPT4" "$H_SA" "$T_SA_NESTED_MISSING"
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$H_SA" --target "$T_SA_NESTED_MISSING"
 
 assert_path "Case S(a): rejected nested target tree is still absent from disk" \
     "$T_SA_NESTED_MISSING" "absent"
 
 assert_stderr_and_exit "Case S(a): same rejection holds under --dry-run" \
-    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --dry-run "$H_SA" "$T_SA_NESTED_MISSING"
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --dry-run --shadow "$H_SA" --target "$T_SA_NESTED_MISSING"
 
 assert_path "Case S(a): rejected nested target tree is still absent from disk after --dry-run" \
     "$T_SA_NESTED_MISSING" "absent"
@@ -791,7 +807,231 @@ H_SB="$T_SB_PARENT/home"
 mkdir -p "$H_SB"
 
 assert_stderr_and_exit "Case S(b): target tree that is a parent of the shadow tree exits 1 with Overlapping tree roots" \
-    1 "Error: Overlapping tree roots" -- "$SCRIPT4" "$H_SB" "$T_SB_PARENT"
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$H_SB" --target "$T_SB_PARENT"
+
+# ======================================================================
+# Case T: multi-shadow, single target -- two non-overlapping shadow roots
+# resolve against one shared target tree; each real file lands under its
+# own shadow's home root, never the other's, and the Ignored non-shadow
+# tally aggregates across both shadow roots rather than resetting per root.
+# ======================================================================
+S1_T="$FIXROOT/case_t/shadow1"
+S2_T="$FIXROOT/case_t/shadow2"
+T_T="$FIXROOT/case_t/target"
+mkdir -p "$S1_T" "$S2_T" "$T_T/sub1" "$T_T/sub2"
+
+print -r -- "t-one-content" > "$T_T/sub1/one.jpg"
+make_shadow "t-one-content" "$S1_T/one.jpg.txt"
+
+print -r -- "t-two-content" > "$T_T/sub2/two.jpg"
+make_shadow "t-two-content" "$S2_T/two.jpg.txt"
+
+print -r -- "not a shadow 1" > "$S1_T/notes1.txt"
+print -r -- "not a shadow 2" > "$S2_T/notes2.txt"
+
+out_t=$("$SCRIPT4" --shadow "$S1_T" --shadow "$S2_T" --target "$T_T" 2>&1)
+
+assert_path "Case T: one.jpg real file lands under its own shadow root S1" \
+    "$S1_T/one.jpg" "exists"
+assert_path "Case T: two.jpg real file lands under its own shadow root S2" \
+    "$S2_T/two.jpg" "exists"
+assert_path "Case T: one.jpg real file does not land under the other shadow root S2" \
+    "$S2_T/one.jpg" "absent"
+assert_path "Case T: two.jpg real file does not land under the other shadow root S1" \
+    "$S1_T/two.jpg" "absent"
+assert_path "Case T: one.jpg shadow lands at its matched real file's vacated target path" \
+    "$T_T/sub1/one.jpg.txt" "exists"
+assert_path "Case T: two.jpg shadow lands at its matched real file's vacated target path" \
+    "$T_T/sub2/two.jpg.txt" "exists"
+assert_contains "Case T: closing summary aggregates the Ignored tally across both shadow roots" \
+    "$out_t" "Ignored 2 non-shadow .txt file(s)"
+
+# ======================================================================
+# Case U: shadow-vs-shadow overlap axis -- rejected before any processing,
+# in the equal form and both nesting orders.
+# ======================================================================
+T_U="$FIXROOT/case_u/target"
+mkdir -p "$T_U"
+
+# U(a): the same existing directory passed as --shadow twice
+H_UA="$FIXROOT/case_u/home_a"
+mkdir -p "$H_UA"
+
+assert_stderr_and_exit "Case U(a): same directory passed as --shadow twice exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$H_UA" --shadow "$H_UA" --target "$T_U"
+
+# U(b): --shadow parent --shadow parent/child, both existing
+PARENT_UB="$FIXROOT/case_u/parent"
+CHILD_UB="$PARENT_UB/child"
+mkdir -p "$CHILD_UB"
+make_shadow "parent-shadow-content" "$PARENT_UB/keepme.jpg.txt"
+
+assert_stderr_and_exit "Case U(b): --shadow parent --shadow parent/child (both exist) exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$PARENT_UB" --shadow "$CHILD_UB" --target "$T_U"
+
+assert_path "Case U(b): shadow file placed in the parent root is still present after rejection" \
+    "$PARENT_UB/keepme.jpg.txt" "exists"
+
+# U(c): the same pair in the reverse flag order
+assert_stderr_and_exit "Case U(c): same shadow pair in reverse flag order exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$CHILD_UB" --shadow "$PARENT_UB" --target "$T_U"
+
+# ======================================================================
+# Case V: target-vs-target overlap axis -- rejected before any target tree
+# is created, in the equal form and the not-yet-existing nested form.
+# ======================================================================
+H_V="$FIXROOT/case_v/home"
+mkdir -p "$H_V"
+
+# V(a): the same existing directory passed as --target twice
+T_VA="$FIXROOT/case_v/target_a"
+mkdir -p "$T_VA"
+
+assert_stderr_and_exit "Case V(a): same directory passed as --target twice exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$H_V" --target "$T_VA" --target "$T_VA"
+
+# V(b): --target existing --target existing/nested_missing, nested absent
+EXISTING_VB="$FIXROOT/case_v/existing"
+mkdir -p "$EXISTING_VB"
+NESTED_MISSING_VB="$EXISTING_VB/nested_missing"
+
+assert_stderr_and_exit "Case V(b): --target existing --target existing/nested_missing (nested absent) exits 1 with Overlapping tree roots" \
+    1 "Error: Overlapping tree roots" -- "$SCRIPT4" --shadow "$H_V" --target "$EXISTING_VB" --target "$NESTED_MISSING_VB"
+
+assert_path "Case V(b): rejected nested target tree is still absent from disk" \
+    "$NESTED_MISSING_VB" "absent"
+
+# ======================================================================
+# Case W: a missing --shadow dir among several must hard-error before any
+# traversal or swap -- the valid root's shadow and the target's real file
+# both stay exactly where they started.
+# ======================================================================
+VALID_W="$FIXROOT/case_w/valid_shadow"
+MISSING_W="$FIXROOT/case_w/missing_shadow"
+T_W="$FIXROOT/case_w/target"
+mkdir -p "$VALID_W" "$T_W/x"
+
+print -r -- "w-content" > "$T_W/x/w.jpg"
+make_shadow "w-content" "$VALID_W/w.jpg.txt"
+
+"$SCRIPT4" --shadow "$VALID_W" --shadow "$MISSING_W" --target "$T_W" >"$FIXROOT/.case_w_stdout" 2>"$FIXROOT/.case_w_stderr"
+exit_w=$?
+err_w=$(<"$FIXROOT/.case_w_stderr")
+
+assert_contains "Case W: stderr names the missing shadow root" \
+    "$err_w" "Error: Shadow tree not found: $MISSING_W"
+
+if [[ "$exit_w" == "1" ]]; then
+    _record 0 "Case W: exit code is 1"
+else
+    _record 1 "Case W: exit code is 1 (got $exit_w)"
+fi
+
+assert_path "Case W: valid shadow root's shadow file is untouched" \
+    "$VALID_W/w.jpg.txt" "exists"
+assert_path "Case W: target's real file is untouched" \
+    "$T_W/x/w.jpg" "exists"
+
+# ======================================================================
+# Case X: full multi-shadow <-> multi-target round trip, the shape the
+# real wrappers use -- one home root and three target roots. Hop 2 is a
+# SINGLE invocation carrying three --shadow flags, the direct proof that
+# revert-revert.zsh can collapse its three-iteration loop.
+# ======================================================================
+H_X="$FIXROOT/case_x/home"
+T1_X="$FIXROOT/case_x/target1"
+T2_X="$FIXROOT/case_x/target2"
+T3_X="$FIXROOT/case_x/target3"
+mkdir -p "$H_X" "$T1_X/a" "$T2_X/b" "$T3_X/c"
+
+print -r -- "x-content-1" > "$T1_X/a/x1.jpg"
+make_shadow "x-content-1" "$H_X/x1.jpg.txt"
+
+print -r -- "x-content-2" > "$T2_X/b/x2.jpg"
+make_shadow "x-content-2" "$H_X/x2.jpg.txt"
+
+print -r -- "x-content-3" > "$T3_X/c/x3.jpg"
+make_shadow "x-content-3" "$H_X/x3.jpg.txt"
+
+pre_snapshot_h_x=$(tree_snapshot "$H_X")
+pre_snapshot_t1_x=$(tree_snapshot "$T1_X")
+pre_snapshot_t2_x=$(tree_snapshot "$T2_X")
+pre_snapshot_t3_x=$(tree_snapshot "$T3_X")
+
+"$SCRIPT4" --shadow "$H_X" --target "$T1_X" --target "$T2_X" --target "$T3_X" >/dev/null 2>&1
+
+assert_path "Case X: after hop 1, x1 real file is under home tree" \
+    "$H_X/x1.jpg" "exists"
+assert_path "Case X: after hop 1, x2 real file is under home tree" \
+    "$H_X/x2.jpg" "exists"
+assert_path "Case X: after hop 1, x3 real file is under home tree" \
+    "$H_X/x3.jpg" "exists"
+assert_path "Case X: after hop 1, x1 shadow sits in target1, the tree its file came from" \
+    "$T1_X/a/x1.jpg.txt" "exists"
+assert_path "Case X: after hop 1, x2 shadow sits in target2, the tree its file came from" \
+    "$T2_X/b/x2.jpg.txt" "exists"
+assert_path "Case X: after hop 1, x3 shadow sits in target3, the tree its file came from" \
+    "$T3_X/c/x3.jpg.txt" "exists"
+
+"$SCRIPT4" --shadow "$T1_X" --shadow "$T2_X" --shadow "$T3_X" --target "$H_X" >/dev/null 2>&1
+
+post_snapshot_h_x=$(tree_snapshot "$H_X")
+post_snapshot_t1_x=$(tree_snapshot "$T1_X")
+post_snapshot_t2_x=$(tree_snapshot "$T2_X")
+post_snapshot_t3_x=$(tree_snapshot "$T3_X")
+
+assert_equal "Case X: home tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_h_x" "$pre_snapshot_h_x"
+assert_equal "Case X: target1 tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_t1_x" "$pre_snapshot_t1_x"
+assert_equal "Case X: target2 tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_t2_x" "$pre_snapshot_t2_x"
+assert_equal "Case X: target3 tree snapshot identical to pre-round-trip state" \
+    "$post_snapshot_t3_x" "$pre_snapshot_t3_x"
+
+# ======================================================================
+# Case Y: flag ordering -- an interleaved --target/--shadow/--dry-run
+# invocation must preview identically to the canonical
+# --dry-run/--shadow/--target order over an identical fixture.
+# ======================================================================
+H_Y1="$FIXROOT/case_y/home1"
+T_Y1="$FIXROOT/case_y/target1"
+mkdir -p "$H_Y1" "$T_Y1/z"
+print -r -- "y-content" > "$T_Y1/z/y.jpg"
+make_shadow "y-content" "$H_Y1/y.jpg.txt"
+
+H_Y2="$FIXROOT/case_y/home2"
+T_Y2="$FIXROOT/case_y/target2"
+mkdir -p "$H_Y2" "$T_Y2/z"
+print -r -- "y-content" > "$T_Y2/z/y.jpg"
+make_shadow "y-content" "$H_Y2/y.jpg.txt"
+
+out_y_interleaved=$("$SCRIPT4" --target "$T_Y1" --shadow "$H_Y1" --dry-run 2>&1)
+out_y_canonical=$("$SCRIPT4" --dry-run --shadow "$H_Y2" --target "$T_Y2" 2>&1)
+
+totals_y_interleaved=$(print -r -- "$out_y_interleaved" | grep '^Totals: ')
+totals_y_canonical=$(print -r -- "$out_y_canonical" | grep '^Totals: ')
+
+assert_equal "Case Y: interleaved flag order's Totals equals canonical order's Totals over an identical fixture" \
+    "$totals_y_interleaved" "$totals_y_canonical"
+
+# ======================================================================
+# Case Z: spaces in flag values -- both roots' directory names contain
+# spaces, proving values survive the +:= array extraction unsplit (fact 1).
+# ======================================================================
+H_Z="$FIXROOT/case_z/home with space"
+T_Z="$FIXROOT/case_z/target with space"
+mkdir -p "$H_Z/a" "$T_Z/x"
+
+print -r -- "z-content" > "$T_Z/x/z.jpg"
+make_shadow "z-content" "$H_Z/a/z.jpg.txt"
+
+"$SCRIPT4" --shadow "$H_Z" --target "$T_Z" >/dev/null 2>&1
+
+assert_path "Case Z: real file lands at shadow's home-tree path despite spaces in root names" \
+    "$H_Z/a/z.jpg" "exists"
+assert_path "Case Z: shadow lands at target-tree path despite spaces in root names" \
+    "$T_Z/x/z.jpg.txt" "exists"
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"
