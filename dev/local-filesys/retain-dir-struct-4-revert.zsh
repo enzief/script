@@ -34,18 +34,18 @@ for t in "$@"; do
 done
 
 [[ ! -d "$SHADOW_TREE" ]] && { print -u2 -r -- "Error: Shadow tree not found: $SHADOW_TREE"; exit 1 }
-for t in "${TARGET_TREES[@]}"; do
-    [[ ! -d "$t" ]] && { print -u2 -r -- "Error: Target tree not found: $t"; exit 1 }
-done
 
 # Resolve every root to its canonical absolute path before the overlap
 # check -- two different relative spellings of the same directory must not
-# slip past this guard.
+# slip past this guard. -m tolerates a target root that does not exist yet
+# (plain realpath -- would fail and store an empty string, silently
+# weakening the overlap comparison below); the shadow tree stays strict
+# since its existence is still a hard prerequisite.
 SHADOW_TREE_ABS=$(realpath -- "$SHADOW_TREE")
 typeset -a TARGET_TREES_ABS
 TARGET_TREES_ABS=()
 for t in "${TARGET_TREES[@]}"; do
-    TARGET_TREES_ABS+=("$(realpath -- "$t")")
+    TARGET_TREES_ABS+=("$(realpath -m -- "$t")")
 done
 
 for t in "${TARGET_TREES_ABS[@]}"; do
@@ -53,6 +53,32 @@ for t in "${TARGET_TREES_ABS[@]}"; do
         print -u2 -r -- "Error: Overlapping tree roots: $SHADOW_TREE_ABS and $t"
         exit 1
     fi
+done
+
+# A target tree that does not exist yet is a legitimate swap destination --
+# create it for real, or report it under --dry-run, mirroring the
+# `mkdir -p "$TGTDIR"` convention in retain-dir-struct-1.zsh. Placed after
+# the overlap guard above so a rejected root is never mkdir'd.
+for t in "${TARGET_TREES[@]}"; do
+    [[ -d "$t" ]] && continue
+    if (( DRY_RUN )); then
+        print -r -- "Would create target tree: $t"
+    else
+        if ! mkdir -p -- "$t"; then
+            print -u2 -r -- "Error: failed to create target tree: $t"
+            exit 1
+        fi
+        print -r -- "Created target tree: $t"
+    fi
+done
+
+# Only trees that actually exist on disk (post-create-or-report) may be
+# handed to find -- an empty path-argument list makes find silently search
+# the invoking shell's cwd instead of nothing.
+typeset -a TARGET_TREES_EXISTING
+TARGET_TREES_EXISTING=()
+for t in "${TARGET_TREES[@]}"; do
+    [[ -d "$t" ]] && TARGET_TREES_EXISTING+=("$t")
 done
 
 # --- What counts as a shadow: a .txt file whose first field is a 64-char
@@ -78,13 +104,15 @@ done < <(find "$SHADOW_TREE" -type f -name "*.txt" -print0)
 declare -A name_count
 declare -A name_first
 
-while IFS= read -r -d '' f; do
-    base="${f:t}"
-    (( name_count[$base]++ ))
-    if [[ -z "${name_first[$base]}" ]]; then
-        name_first[$base]=$(realpath -- "$f")
-    fi
-done < <(find "${TARGET_TREES[@]}" -type f -print0)
+if (( ${#TARGET_TREES_EXISTING[@]} )); then
+    while IFS= read -r -d '' f; do
+        base="${f:t}"
+        (( name_count[$base]++ ))
+        if [[ -z "${name_first[$base]}" ]]; then
+            name_first[$base]=$(realpath -- "$f")
+        fi
+    done < <(find "${TARGET_TREES_EXISTING[@]}" -type f -print0)
+fi
 
 print -r -- "Reverting shadows from '$SHADOW_TREE' against ${#TARGET_TREES[@]} target tree(s)..."
 print -r -- "----------------------------------------------------"
@@ -116,11 +144,13 @@ for shadow in "${shadow_files[@]}"; do
         typeset -a candidates matches
         candidates=()
         matches=()
-        while IFS= read -r -d '' f; do
-            if [[ "${f:t}" == "$base" ]]; then
-                candidates+=("$(realpath -- "$f")")
-            fi
-        done < <(find "${TARGET_TREES[@]}" -type f -print0)
+        if (( ${#TARGET_TREES_EXISTING[@]} )); then
+            while IFS= read -r -d '' f; do
+                if [[ "${f:t}" == "$base" ]]; then
+                    candidates+=("$(realpath -- "$f")")
+                fi
+            done < <(find "${TARGET_TREES_EXISTING[@]}" -type f -print0)
+        fi
 
         for cand in "${candidates[@]}"; do
             cand_hash=$(sha256sum -- "$cand" | awk '{print $1}')
