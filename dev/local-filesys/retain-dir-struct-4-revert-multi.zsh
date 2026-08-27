@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# retain-dir-struct-4-revert.zsh -- bidirectional shadow/real-file swap.
+# retain-dir-struct-4-revert-multi.zsh -- bidirectional shadow/real-file swap.
 #
 # Resolves each hash-only shadow .txt file under <shadow_tree> (the format
 # retain-dir-struct-1.zsh produces: sha256sum output redirected to a .txt

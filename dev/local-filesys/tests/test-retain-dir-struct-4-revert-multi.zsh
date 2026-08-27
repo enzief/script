@@ -1,13 +1,13 @@
 #!/bin/zsh
 
-# Regression test for retain-dir-struct-4-revert.zsh -- the bidirectional
+# Regression test for retain-dir-struct-4-revert-multi.zsh -- the bidirectional
 # shadow/real-file swap tool. Covers name-first resolution, mandatory hash
 # verification, the two-mv positional exchange, and every failure mode
 # (no-match, hash mismatch, ambiguous duplicates, occupied destination,
 # partial-swap rollback).
 #
 # Manual assert-style test (TESTING.md Option 3) -- no external test framework.
-# Run directly: ./dev/local-filesys/tests/test-retain-dir-struct-4-revert.zsh
+# Run directly: ./dev/local-filesys/tests/test-retain-dir-struct-4-revert-multi.zsh
 # Runs correctly from any working directory; resolves the scripts under test
 # relative to this file's own location.
 
@@ -15,7 +15,7 @@
 SCRIPT_DIR=${0:A:h}
 LOCALFS_DIR=${SCRIPT_DIR:h}
 SCRIPT1="$LOCALFS_DIR/retain-dir-struct-1.zsh"
-SCRIPT4="$LOCALFS_DIR/retain-dir-struct-4-revert.zsh"
+SCRIPT4="$LOCALFS_DIR/retain-dir-struct-4-revert-multi.zsh"
 
 if [[ ! -x "$SCRIPT1" ]]; then
     print -u2 -r -- "Error: $SCRIPT1 not found or not executable"
