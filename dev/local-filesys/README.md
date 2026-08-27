@@ -44,15 +44,16 @@ later scripts match on file content, not on path.
    retain-dir-struct-3-find-sorted.zsh <shadow_dir> <original_data_dir>
    ```
 
-5. **`retain-dir-struct-4-revert.zsh`** — swaps each shadow `.txt` and its
-   real file into each other's positions. Supports `--dry-run` and accepts
-   more than one target tree.
+5. **`retain-dir-struct-4-revert-multi.zsh`** — swaps each shadow `.txt` and
+   its real file into each other's positions. Supports `--dry-run` and
+   accepts more than one shadow tree and more than one target tree in a
+   single invocation.
 
    ```
-   retain-dir-struct-4-revert.zsh [--dry-run] <shadow_tree> <target_tree> [<target_tree>...]
+   retain-dir-struct-4-revert-multi.zsh [--dry-run] --shadow <dir> [--shadow <dir>...] --target <dir> [--target <dir>...]
    ```
 
-### retain-dir-struct-4-revert.zsh behavior
+### retain-dir-struct-4-revert-multi.zsh behavior
 
 This is the only script that moves real files, so its guards matter:
 
@@ -69,7 +70,11 @@ This is the only script that moves real files, so its guards matter:
 - It performs the swap with two `mv` calls and rolls the first one back if
   the second fails, so the file is relocated byte-for-byte and never deleted
   or regenerated.
-- It rejects overlapping shadow and target tree roots.
+- It rejects overlapping tree roots on all three axes — shadow-vs-shadow,
+  target-vs-target, and shadow-vs-target — before any directory is created
+  or any file is moved.
+- Every shadow tree must already exist; a missing target tree is created on
+  a real run, or only announced under `--dry-run`.
 - It exits 1 if any error was counted.
 
 ### Script 3 vs script 4 `--dry-run`
@@ -81,7 +86,7 @@ The two preview modes look interchangeable. They are not:
   mapping report, printing a `SHADOW`/`REAL` pair per resolved shadow and a
   `SHADOW`/`RESULT` line when no real file matches. Cost scales with hashing
   the entire data dir.
-- `retain-dir-struct-4-revert.zsh --dry-run` indexes real files by basename
+- `retain-dir-struct-4-revert-multi.zsh --dry-run` indexes real files by basename
   only, with no upfront hashing, hashes just the candidates it actually
   matched, and additionally checks that both swap destinations are vacant.
   It is a preview of the exact swap it is about to perform, not a general
