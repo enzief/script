@@ -115,6 +115,7 @@ None yet.
 | 260827-7h9 | Create dev/local-filesys/README.md documenting the shadow/rearrange/revert workflow | 2026-08-27 | c8ceb36 | | [260827-7h9-create-dev-local-filesys-readme-md-docum](./quick/260827-7h9-create-dev-local-filesys-readme-md-docum/) |
 | 260827-dfl | Fix dev/local-filesys/retain-dir-struct-4-revert.zsh so it creates missing target tree directories instead of erroring | 2026-08-27 | f2801bb | Verified | [260827-dfl-fix-dev-local-filesys-retain-dir-struct-](./quick/260827-dfl-fix-dev-local-filesys-retain-dir-struct-/) |
 | 260827-jsx | Generalize retain-dir-struct-4-revert.zsh to accept multiple --shadow and multiple --target dirs; renamed to retain-dir-struct-4-revert-multi.zsh; updated the two external device-shadow wrapper scripts to the new flag interface | 2026-08-27 | 64121e5 | Verified | [260827-jsx-make-retain-dir-struct-4-revert-zsh-acce](./quick/260827-jsx-make-retain-dir-struct-4-revert-zsh-acce/) |
+| 260827-t70 | Add a final recap in retain-dir-struct-4-revert-multi.zsh's summary listing every skipped/unmatched/errored shadow by name and reason, not just counts | 2026-08-28 | 90a7a32 | | [260827-t70-add-a-final-recap-in-retain-dir-struct-4](./quick/260827-t70-add-a-final-recap-in-retain-dir-struct-4/) |
 
 ## Deferred Items
 
@@ -131,4 +132,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-15T13:29:15.317Z
 Stopped at: Completed 04-02-PLAN.md
 Resume file: None
-Last activity: 2026-08-27 - Completed quick task 260827-jsx: Generalize retain-dir-struct-4-revert.zsh to accept multiple --shadow and multiple --target dirs, renamed to retain-dir-struct-4-revert-multi.zsh
+Last activity: 2026-08-28 - Completed quick task 260827-t70: Add a final recap in retain-dir-struct-4-revert-multi.zsh's summary listing every skipped/unmatched/errored shadow by name and reason
