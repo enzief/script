@@ -181,6 +181,21 @@ args_lines() {
     awk -v p="$1" '$1==p{c++} END{print c+0}' "$FIXROOT/rclone.args"
 }
 
+# --- Failure-injection helpers (Task 2): force the stub's mkdir/moveto
+# dispatch to a non-zero exit for the next run, then clear afterward so a
+# forced failure can never leak into a later case. ---
+set_mkdir_exit() {
+    print -r -- "$1" > "$FIXROOT/.mkdir_exit"
+}
+
+set_moveto_exit() {
+    print -r -- "$1" > "$FIXROOT/.moveto_exit"
+}
+
+reset_failure_injection() {
+    rm -f "$FIXROOT/.mkdir_exit" "$FIXROOT/.moveto_exit"
+}
+
 # ======================================================================
 # Case A: real run, unique match, misplaced -- one mkdir, one moveto
 # ======================================================================
@@ -318,6 +333,327 @@ if [[ "$TEST_REMOTE_NAME" != "mega" && "$TEST_REMOTE_NAME" != "" ]]; then
 else
     _record 1 "Case Z: TEST_REMOTE_NAME is a value that cannot exist in any real rclone config"
 fi
+
+# ======================================================================
+# Case C: already correct -- counted only, no per-file line
+# ======================================================================
+CASE_C_MANIFEST="$FIXROOT/case_c_manifest.json"
+cat > "$CASE_C_MANIFEST" <<'JSON'
+[
+  {"Path":"2019/IMG.JPG","Name":"IMG.JPG","Size":11,"IsDir":false}
+]
+JSON
+CASE_C_TARGET="$FIXROOT/case_c/target"
+mkfile "$CASE_C_TARGET/2019/IMG.JPG" 11
+
+make_stub_rclone "$CASE_C_MANIFEST"
+reset_args_log
+reset_failure_injection
+run_tool --target "$CASE_C_TARGET"
+
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case C: exits 0"
+else
+    _record 1 "Case C: exits 0 (got $TOOL_EXIT)"
+fi
+totals_c=$(print -r -- "$TOOL_OUT" | grep '^Totals: ')
+assert_contains "Case C: Totals reports 1 already correct" "$totals_c" "1 already correct"
+assert_contains "Case C: Totals reports 0 moved" "$totals_c" "0 moved"
+mkdir_lines_c=$(args_lines mkdir)
+moveto_lines_c=$(args_lines moveto)
+assert_equal "Case C: zero mkdir logged" "$mkdir_lines_c" "0"
+assert_equal "Case C: zero moveto logged" "$moveto_lines_c" "0"
+if [[ "$TOOL_OUT" != *"Moved: "* ]]; then
+    _record 0 "Case C: stdout has no Moved: line"
+else
+    _record 1 "Case C: stdout has no Moved: line"
+fi
+if [[ "$TOOL_OUT" != *"Skip: "* ]]; then
+    _record 0 "Case C: stdout has no Skip: line"
+else
+    _record 1 "Case C: stdout has no Skip: line"
+fi
+
+# ======================================================================
+# Case D: local-side collision -- two local files share the remote-unique
+# file's size
+# ======================================================================
+CASE_D_MANIFEST="$FIXROOT/case_d_manifest.json"
+cat > "$CASE_D_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/d.JPG","Name":"d.JPG","Size":11,"IsDir":false}
+]
+JSON
+CASE_D_TARGET="$FIXROOT/case_d/target"
+mkfile "$CASE_D_TARGET/one/x.JPG" 11
+mkfile "$CASE_D_TARGET/two/y.JPG" 11
+
+make_stub_rclone "$CASE_D_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_D_TARGET"
+
+assert_contains "Case D: stdout skips on local-side size collision" \
+    "$TOOL_OUT" "Skip: orig/d.JPG (size 11: 2 local files share this size)"
+moveto_lines_d=$(args_lines moveto)
+assert_equal "Case D: zero moveto logged" "$moveto_lines_d" "0"
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case D: exits 0"
+else
+    _record 1 "Case D: exits 0 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case E: remote-side collision -- two remote files share a size that is
+# unique on the local side; both remote paths are reported
+# ======================================================================
+CASE_E_MANIFEST="$FIXROOT/case_e_manifest.json"
+cat > "$CASE_E_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/e1.JPG","Name":"e1.JPG","Size":11,"IsDir":false},
+  {"Path":"orig/e2.JPG","Name":"e2.JPG","Size":11,"IsDir":false}
+]
+JSON
+CASE_E_TARGET="$FIXROOT/case_e/target"
+mkfile "$CASE_E_TARGET/only.JPG" 11
+
+make_stub_rclone "$CASE_E_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_E_TARGET"
+
+assert_contains "Case E: skip line for first remote-side collision path" \
+    "$TOOL_OUT" "Skip: orig/e1.JPG (size 11: 2 remote files share this size)"
+assert_contains "Case E: skip line for second remote-side collision path" \
+    "$TOOL_OUT" "Skip: orig/e2.JPG (size 11: 2 remote files share this size)"
+moveto_lines_e=$(args_lines moveto)
+assert_equal "Case E: zero moveto logged" "$moveto_lines_e" "0"
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case E: exits 0"
+else
+    _record 1 "Case E: exits 0 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case F: no local match for the remote file's size
+# ======================================================================
+CASE_F_MANIFEST="$FIXROOT/case_f_manifest.json"
+cat > "$CASE_F_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/f.JPG","Name":"f.JPG","Size":99,"IsDir":false}
+]
+JSON
+CASE_F_TARGET="$FIXROOT/case_f/target"
+mkdir -p "$CASE_F_TARGET"
+
+make_stub_rclone "$CASE_F_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_F_TARGET"
+
+assert_contains "Case F: skip line for no local match" \
+    "$TOOL_OUT" "Skip: orig/f.JPG (size 99: no local file of this size)"
+moveto_lines_f=$(args_lines moveto)
+assert_equal "Case F: zero moveto logged" "$moveto_lines_f" "0"
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case F: exits 0"
+else
+    _record 1 "Case F: exits 0 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case G: destination already occupied on the remote -- the data-loss
+# guard. rclone moveto overwrites its destination, so an unguarded run
+# here would destroy the file already at 2019/a.JPG.
+# ======================================================================
+CASE_G_MANIFEST="$FIXROOT/case_g_manifest.json"
+cat > "$CASE_G_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/a.JPG","Name":"a.JPG","Size":11,"IsDir":false},
+  {"Path":"2019/a.JPG","Name":"a.JPG","Size":22,"IsDir":false}
+]
+JSON
+CASE_G_TARGET="$FIXROOT/case_g/target"
+mkfile "$CASE_G_TARGET/2019/a.JPG" 11
+
+make_stub_rclone "$CASE_G_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_G_TARGET"
+
+assert_contains "Case G: stderr reports the destination-already-occupied refusal" \
+    "$TOOL_ERR" "Error: destination already occupied on the remote for orig/a.JPG (2019/a.JPG)"
+moveto_lines_g=$(args_lines moveto)
+assert_equal "Case G: zero moveto logged" "$moveto_lines_g" "0"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case G: exits 1"
+else
+    _record 1 "Case G: exits 1 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case H: per-item rclone failure, warn-and-continue (DD-05)
+# ======================================================================
+
+# --- H1: moveto fails for every item; two independent unique matches ---
+CASE_H_MANIFEST="$FIXROOT/case_h_manifest.json"
+cat > "$CASE_H_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/h1.JPG","Name":"h1.JPG","Size":31,"IsDir":false},
+  {"Path":"orig/h2.JPG","Name":"h2.JPG","Size":32,"IsDir":false}
+]
+JSON
+CASE_H_TARGET="$FIXROOT/case_h/target"
+mkfile "$CASE_H_TARGET/new/h1.JPG" 31
+mkfile "$CASE_H_TARGET/new/h2.JPG" 32
+
+make_stub_rclone "$CASE_H_MANIFEST"
+reset_args_log
+set_moveto_exit 1
+run_tool --target "$CASE_H_TARGET"
+reset_failure_injection
+
+assert_contains "Case H: stderr reports moveto-failed for h1" \
+    "$TOOL_ERR" "Error: rclone moveto failed for orig/h1.JPG -> new/h1.JPG"
+assert_contains "Case H: stderr reports moveto-failed for h2" \
+    "$TOOL_ERR" "Error: rclone moveto failed for orig/h2.JPG -> new/h2.JPG"
+totals_h=$(print -r -- "$TOOL_OUT" | grep '^Totals: ')
+assert_contains "Case H: Totals reports 2 errors" "$totals_h" "2 errors"
+assert_contains "Case H: Totals reports 0 moved" "$totals_h" "0 moved"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case H: exits 1"
+else
+    _record 1 "Case H: exits 1 (got $TOOL_EXIT)"
+fi
+
+# --- H2: mkdir fails; the move must never be attempted afterward ---
+CASE_H2_MANIFEST="$FIXROOT/case_h2_manifest.json"
+cat > "$CASE_H2_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/h3.JPG","Name":"h3.JPG","Size":33,"IsDir":false}
+]
+JSON
+CASE_H2_TARGET="$FIXROOT/case_h2/target"
+mkfile "$CASE_H2_TARGET/new/h3.JPG" 33
+
+make_stub_rclone "$CASE_H2_MANIFEST"
+reset_args_log
+set_mkdir_exit 1
+run_tool --target "$CASE_H2_TARGET"
+reset_failure_injection
+
+assert_contains "Case H2: stderr reports mkdir-failed" \
+    "$TOOL_ERR" "Error: rclone mkdir failed for orig/h3.JPG (destination dir: new)"
+moveto_lines_h2=$(args_lines moveto)
+assert_equal "Case H2: no moveto logged after a failed mkdir" "$moveto_lines_h2" "0"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case H2: exits 1"
+else
+    _record 1 "Case H2: exits 1 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case I: mixed recap -- one clean move, one no-local-match skip, one
+# destination-occupied error, all in a single run
+# ======================================================================
+CASE_I_MANIFEST="$FIXROOT/case_i_manifest.json"
+cat > "$CASE_I_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/i-move.JPG","Name":"i-move.JPG","Size":41,"IsDir":false},
+  {"Path":"orig/i-nomatch.JPG","Name":"i-nomatch.JPG","Size":42,"IsDir":false},
+  {"Path":"orig/i-occ.JPG","Name":"i-occ.JPG","Size":43,"IsDir":false},
+  {"Path":"already/i-occ.JPG","Name":"i-occ.JPG","Size":44,"IsDir":false}
+]
+JSON
+CASE_I_TARGET="$FIXROOT/case_i/target"
+mkfile "$CASE_I_TARGET/new/i-move.JPG" 41
+mkfile "$CASE_I_TARGET/already/i-occ.JPG" 43
+
+make_stub_rclone "$CASE_I_MANIFEST"
+reset_args_log
+reset_failure_injection
+run_tool --target "$CASE_I_TARGET"
+
+assert_contains "Case I: recap header appears in stdout" \
+    "$TOOL_OUT" "Unresolved remote files:"
+assert_contains "Case I: recap names the no-match skip with its indented reason" \
+    "$TOOL_OUT" "  Skip: orig/i-nomatch.JPG (size 42: no local file of this size)"
+assert_contains "Case I: recap names the occupied error with its indented reason" \
+    "$TOOL_OUT" "  Error: destination already occupied on the remote for orig/i-occ.JPG (already/i-occ.JPG)"
+assert_contains "Case I: stderr still carries the un-indented occupied error inline" \
+    "$TOOL_ERR" "Error: destination already occupied on the remote for orig/i-occ.JPG (already/i-occ.JPG)"
+
+nomatch_occurrences_i=$(count_occurrences "$TOOL_OUT" "Skip: orig/i-nomatch.JPG (size 42: no local file of this size)")
+assert_equal "Case I: no-match reason appears twice in stdout, byte-identical" \
+    "$nomatch_occurrences_i" "2"
+
+recap_section_i=$(print -r -- "$TOOL_OUT" | awk '/^Unresolved remote files:$/{f=1;next} f && /^  /')
+if [[ "$recap_section_i" != *"i-move.JPG"* ]]; then
+    _record 0 "Case I: recap section does not name the successfully-moved path"
+else
+    _record 1 "Case I: recap section does not name the successfully-moved path (got: $recap_section_i)"
+fi
+
+recap_and_after_i=$(print -r -- "$TOOL_OUT" | awk '/^Unresolved remote files:$/{f=1} f')
+if [[ "$recap_and_after_i" != *"Totals: "* ]]; then
+    _record 0 "Case I: recap header appears after the Totals line"
+else
+    _record 1 "Case I: recap header appears after the Totals line (got: $recap_and_after_i)"
+fi
+
+if [[ "$TOOL_OUT" != "Error: "* && "$TOOL_OUT" != *$'\n'"Error: "* ]]; then
+    _record 0 "Case I: no stdout line starts with un-indented 'Error: '"
+else
+    _record 1 "Case I: no stdout line starts with un-indented 'Error: '"
+fi
+
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case I: exits 1"
+else
+    _record 1 "Case I: exits 1 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case J: a run with zero skips and zero errors prints no "Unresolved
+# remote files:" header at all -- the recap is silent, not empty.
+# ======================================================================
+CASE_J_MANIFEST="$FIXROOT/case_j_manifest.json"
+cat > "$CASE_J_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/j.JPG","Name":"j.JPG","Size":51,"IsDir":false}
+]
+JSON
+CASE_J_TARGET="$FIXROOT/case_j/target"
+mkfile "$CASE_J_TARGET/new/j.JPG" 51
+
+make_stub_rclone "$CASE_J_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_J_TARGET"
+
+if [[ "$TOOL_OUT" != *"Unresolved remote files:"* ]]; then
+    _record 0 "Case J: zero-unresolved run prints no Unresolved remote files header"
+else
+    _record 1 "Case J: zero-unresolved run prints no Unresolved remote files header"
+fi
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case J: zero-unresolved run exits 0"
+else
+    _record 1 "Case J: zero-unresolved run exits 0 (got $TOOL_EXIT)"
+fi
+
+# ======================================================================
+# Case K: a dry run over the Case I mixed fixture reports the same
+# dispositions as the real run, the recap is printed, and the argv log
+# holds only the lsjson line.
+# ======================================================================
+make_stub_rclone "$CASE_I_MANIFEST"
+reset_args_log
+run_tool --dry-run --target "$CASE_I_TARGET"
+
+assert_contains "Case K: dry run recap header appears" "$TOOL_OUT" "Unresolved remote files:"
+assert_contains "Case K: dry run skip line matches the real run's" \
+    "$TOOL_OUT" "Skip: orig/i-nomatch.JPG (size 42: no local file of this size)"
+assert_contains "Case K: dry run error line matches the real run's (reported in both modes)" \
+    "$TOOL_OUT" "Error: destination already occupied on the remote for orig/i-occ.JPG (already/i-occ.JPG)"
+
+args_total_lines_k=$(wc -l < "$FIXROOT/rclone.args")
+assert_equal "Case K: dry run argv log holds only the lsjson line" "$args_total_lines_k" "1"
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"

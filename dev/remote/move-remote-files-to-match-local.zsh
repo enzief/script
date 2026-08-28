@@ -133,8 +133,33 @@ for (( i = 1; i <= ${#remote_paths[@]}; i++ )); do
     rc=${remote_count[$s]:-0}
     lc=${local_count[$s]:-0}
 
-    # Non-unique branches are filled in by Task 2; for now fall through.
-    (( rc != 1 || lc != 1 )) && continue
+    # Ambiguity is checked in a fixed order so the reported reason is
+    # deterministic: remote-side ambiguity first (a property of the
+    # remote file itself), then zero local candidates, then local-side
+    # ambiguity.
+    if (( rc > 1 )); then
+        msg="Skip: $R (size $s: $rc remote files share this size)"
+        echo "$msg"
+        (( skip_count++ ))
+        unresolved+=("$msg")
+        continue
+    fi
+
+    if (( lc == 0 )); then
+        msg="Skip: $R (size $s: no local file of this size)"
+        echo "$msg"
+        (( skip_count++ ))
+        unresolved+=("$msg")
+        continue
+    fi
+
+    if (( lc > 1 )); then
+        msg="Skip: $R (size $s: $lc local files share this size)"
+        echo "$msg"
+        (( skip_count++ ))
+        unresolved+=("$msg")
+        continue
+    fi
 
     cand="${local_first[$s]}"
     root_abs="${local_first_root[$s]}"
@@ -143,6 +168,23 @@ for (( i = 1; i <= ${#remote_paths[@]}; i++ )); do
     desired="${cand#$root_abs/}"
 
     [[ "$desired" == "$R" ]] && { (( already_count++ )); continue }
+
+    # Destination-occupied refusal (data-loss guard): rclone moveto
+    # overwrites its destination, so a desired path already held by a
+    # DIFFERENT remote file must never be moved into. Two remote files
+    # can never compute the same destination (each maps through a
+    # distinct unique size to a distinct local file, and two files
+    # cannot share an absolute path), so the only collision source is a
+    # remote file that already lives at the destination -- guarding
+    # against the manifest-derived occupied set is sufficient. This
+    # gates BOTH modes: a dry run reports the refusal too.
+    if [[ -n "${occupied[$desired]}" ]]; then
+        msg="Error: destination already occupied on the remote for $R ($desired)"
+        echo "$msg" >&2
+        (( error_count++ ))
+        unresolved+=("$msg")
+        continue
+    fi
 
     if (( DRY_RUN )); then
         echo "Would move: $R -> $desired"
