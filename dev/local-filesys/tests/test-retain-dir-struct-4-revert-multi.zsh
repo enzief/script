@@ -71,6 +71,14 @@ assert_equal() {
     fi
 }
 
+count_occurrences() {
+    # count_occurrences <haystack> <needle> -- literal substring match,
+    # counted per matching line. grep -F is mandatory: this machine's grep
+    # is ugrep 7.8.4, which treats an unescaped "$" as a mid-pattern anchor
+    # rather than a literal character without -F.
+    print -r -- "$1" | grep -c -F -- "$2"
+}
+
 assert_stderr_and_exit() {
     # assert_stderr_and_exit <description> <expected_exit> <stderr_needle> -- <command...>
     # Captures stdout/stderr separately; passes only if stdout is empty,
@@ -1032,6 +1040,135 @@ assert_path "Case Z: real file lands at shadow's home-tree path despite spaces i
     "$H_Z/a/z.jpg" "exists"
 assert_path "Case Z: shadow lands at target-tree path despite spaces in root names" \
     "$T_Z/x/z.jpg.txt" "exists"
+
+# ======================================================================
+# Case AA: mixed run recap -- a clean swap plus a no-match skip, an
+# ambiguous-match error, and a destination-occupied error, all in one
+# invocation. Proves the closing "Unresolved shadows:" recap names every
+# non-swapped shadow with its verbatim inline reason, retains errors on
+# stderr, and never re-routes them to stdout for the swap that succeeded.
+# ======================================================================
+H_AA="$FIXROOT/case_aa/home"
+T_AA="$FIXROOT/case_aa/target"
+mkdir -p "$H_AA" "$T_AA/x" "$T_AA/q1" "$T_AA/q2" "$T_AA/occ"
+
+# clean.jpg: clean unique match -- must swap and must NOT appear in the recap
+make_shadow "aa-clean-content" "$H_AA/clean.jpg.txt"
+print -r -- "aa-clean-content" > "$T_AA/x/clean.jpg"
+
+# nomatch.jpg: no candidate anywhere in the target tree -- skip
+make_shadow "aa-nomatch-content" "$H_AA/nomatch.jpg.txt"
+
+# ambig.jpg: two same-named, identical-content candidates -- ambiguous error
+make_shadow "aa-ambig-content" "$H_AA/ambig.jpg.txt"
+print -r -- "aa-ambig-content" > "$T_AA/q1/ambig.jpg"
+print -r -- "aa-ambig-content" > "$T_AA/q2/ambig.jpg"
+
+# occupied.jpg: hash-matching candidate in the target tree, plus a
+# pre-existing file already sitting at the shadow's own real-file path
+make_shadow "aa-occupied-content" "$H_AA/occupied.jpg.txt"
+print -r -- "aa-occupied-content" > "$T_AA/occ/occupied.jpg"
+print -r -- "pre-existing, not the swap target" > "$H_AA/occupied.jpg"
+
+"$SCRIPT4" --shadow "$H_AA" --target "$T_AA" >"$FIXROOT/.case_aa_stdout" 2>"$FIXROOT/.case_aa_stderr"
+exit_aa=$?
+out_aa=$(<"$FIXROOT/.case_aa_stdout")
+err_aa=$(<"$FIXROOT/.case_aa_stderr")
+
+assert_contains "Case AA: recap header appears in stdout" \
+    "$out_aa" "Unresolved shadows:"
+assert_contains "Case AA: recap names the no-match skip with its indented reason" \
+    "$out_aa" "  No matching file found for: nomatch.jpg.txt"
+assert_contains "Case AA: recap names the ambiguous-match error with its indented reason" \
+    "$out_aa" "  Error: ambiguous match for ambig.jpg.txt (2 hash-matching candidates)"
+assert_contains "Case AA: recap names the destination-occupied error with its indented reason" \
+    "$out_aa" "  Error: destination already exists for occupied.jpg.txt ("
+assert_contains "Case AA: stderr still carries the un-indented ambiguous-match error inline" \
+    "$err_aa" "Error: ambiguous match for ambig.jpg.txt (2 hash-matching candidates)"
+
+nomatch_occurrences_aa=$(count_occurrences "$out_aa" "No matching file found for: nomatch.jpg.txt")
+assert_equal "Case AA: stdout carries the no-match line twice -- inline and in the recap, byte-identical" \
+    "$nomatch_occurrences_aa" "2"
+
+if [[ "$out_aa" != "Error: "* && "$out_aa" != *$'\n'"Error: "* ]]; then
+    _record 0 "Case AA: no stdout line starts with un-indented 'Error: '"
+else
+    _record 1 "Case AA: no stdout line starts with un-indented 'Error: '"
+fi
+
+recap_section_aa=$(print -r -- "$out_aa" | awk '/^Unresolved shadows:$/{f=1;next} f && /^  /')
+if [[ "$recap_section_aa" != *"clean.jpg"* ]]; then
+    _record 0 "Case AA: recap section does not name the successfully-swapped shadow"
+else
+    _record 1 "Case AA: recap section does not name the successfully-swapped shadow (got: $recap_section_aa)"
+fi
+
+recap_and_after_aa=$(print -r -- "$out_aa" | awk '/^Unresolved shadows:$/{f=1} f')
+if [[ "$recap_and_after_aa" != *"Totals: "* ]]; then
+    _record 0 "Case AA: recap header appears after the Totals line"
+else
+    _record 1 "Case AA: recap header appears after the Totals line (got: $recap_and_after_aa)"
+fi
+
+if [[ "$exit_aa" == "1" ]]; then
+    _record 0 "Case AA: exit code is 1 (at least one error occurred)"
+else
+    _record 1 "Case AA: exit code is 1 (at least one error occurred) (got $exit_aa)"
+fi
+
+# ======================================================================
+# Case AB: a run with zero skips and zero errors prints no
+# "Unresolved shadows:" header at all -- the recap is silent, not empty.
+# ======================================================================
+H_AB="$FIXROOT/case_ab/home"
+T_AB="$FIXROOT/case_ab/target"
+mkdir -p "$H_AB" "$T_AB/x"
+
+make_shadow "ab-clean-content" "$H_AB/clean.jpg.txt"
+print -r -- "ab-clean-content" > "$T_AB/x/clean.jpg"
+
+out_ab=$("$SCRIPT4" --shadow "$H_AB" --target "$T_AB" 2>&1)
+exit_ab=$?
+
+if [[ "$out_ab" != *"Unresolved shadows:"* ]]; then
+    _record 0 "Case AB: zero-unresolved run prints no Unresolved shadows header"
+else
+    _record 1 "Case AB: zero-unresolved run prints no Unresolved shadows header"
+fi
+
+if [[ "$exit_ab" == "0" ]]; then
+    _record 0 "Case AB: zero-unresolved run exits 0"
+else
+    _record 1 "Case AB: zero-unresolved run exits 0 (got $exit_ab)"
+fi
+
+# ======================================================================
+# Case AC: --dry-run also prints the recap, and the trees stay unchanged.
+# ======================================================================
+H_AC="$FIXROOT/case_ac/home"
+T_AC="$FIXROOT/case_ac/target"
+mkdir -p "$H_AC" "$T_AC/x"
+
+make_shadow "ac-clean-content" "$H_AC/clean.jpg.txt"
+print -r -- "ac-clean-content" > "$T_AC/x/clean.jpg"
+make_shadow "ac-nomatch-content" "$H_AC/nomatch.jpg.txt"
+
+pre_snapshot_h_ac=$(tree_snapshot "$H_AC")
+pre_snapshot_t_ac=$(tree_snapshot "$T_AC")
+
+out_ac=$("$SCRIPT4" --dry-run --shadow "$H_AC" --target "$T_AC" 2>&1)
+
+post_snapshot_h_ac=$(tree_snapshot "$H_AC")
+post_snapshot_t_ac=$(tree_snapshot "$T_AC")
+
+assert_contains "Case AC: dry run recap header appears in stdout" \
+    "$out_ac" "Unresolved shadows:"
+assert_contains "Case AC: dry run recap names the no-match skip with its indented reason" \
+    "$out_ac" "  No matching file found for: nomatch.jpg.txt"
+assert_equal "Case AC: home tree snapshot unchanged across dry run with recap" \
+    "$post_snapshot_h_ac" "$pre_snapshot_h_ac"
+assert_equal "Case AC: target tree snapshot unchanged across dry run with recap" \
+    "$post_snapshot_t_ac" "$pre_snapshot_t_ac"
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"

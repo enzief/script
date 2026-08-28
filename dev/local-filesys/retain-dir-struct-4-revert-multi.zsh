@@ -201,6 +201,14 @@ swap_count=0
 skip_count=0
 error_count=0
 
+# unresolved_shadows collects the verbatim inline message from every
+# skip/error branch below, in the order encountered -- printed as the
+# closing recap so the two can never drift apart (single source of truth).
+# Declared once outside the loop so entries accumulate across every shadow
+# root, mirroring how nonshadow_count is declared before the discovery loop.
+typeset -a unresolved_shadows
+unresolved_shadows=()
+
 for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
     shadow="${shadow_files[$i]}"
     shadow_root="${shadow_roots[$i]}"
@@ -212,8 +220,10 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
     candidate_count=${name_count[$base]:-0}
 
     if (( candidate_count == 0 )); then
-        print -r -- "No matching file found for: $shadow_rel"
+        msg="No matching file found for: $shadow_rel"
+        print -r -- "$msg"
         (( skip_count++ ))
+        unresolved_shadows+=("$msg")
         continue
     fi
 
@@ -240,12 +250,16 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
         done
 
         if (( ${#matches[@]} == 0 )); then
-            print -u2 -r -- "Error: hash mismatch for $shadow_rel (no candidate among $candidate_count matches the stored hash)"
+            msg="Error: hash mismatch for $shadow_rel (no candidate among $candidate_count matches the stored hash)"
+            print -u2 -r -- "$msg"
             (( error_count++ ))
+            unresolved_shadows+=("$msg")
             continue
         elif (( ${#matches[@]} > 1 )); then
-            print -u2 -r -- "Error: ambiguous match for $shadow_rel (${#matches[@]} hash-matching candidates)"
+            msg="Error: ambiguous match for $shadow_rel (${#matches[@]} hash-matching candidates)"
+            print -u2 -r -- "$msg"
             (( error_count++ ))
+            unresolved_shadows+=("$msg")
             continue
         fi
         real_src="${matches[1]}"
@@ -254,8 +268,10 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
     # Mandatory hash verification (D-04) -- even on a unique name match.
     cand_hash=$(sha256sum -- "$real_src" | awk '{print $1}')
     if [[ "$cand_hash" != "$stored_hash" ]]; then
-        print -u2 -r -- "Error: hash mismatch for $shadow_rel (candidate: $real_src)"
+        msg="Error: hash mismatch for $shadow_rel (candidate: $real_src)"
+        print -u2 -r -- "$msg"
         (( error_count++ ))
+        unresolved_shadows+=("$msg")
         continue
     fi
 
@@ -264,8 +280,10 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
     if [[ -e "$dest_real" || -e "$dest_shadow" ]]; then
         occupied="$dest_real"
         [[ -e "$dest_shadow" ]] && occupied="$dest_shadow"
-        print -u2 -r -- "Error: destination already exists for $shadow_rel ($occupied)"
+        msg="Error: destination already exists for $shadow_rel ($occupied)"
+        print -u2 -r -- "$msg"
         (( error_count++ ))
+        unresolved_shadows+=("$msg")
         continue
     fi
 
@@ -276,8 +294,10 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
     fi
 
     if ! mv -- "$real_src" "$dest_real"; then
-        print -u2 -r -- "Error: move failed for $shadow_rel ($real_src -> $dest_real)"
+        msg="Error: move failed for $shadow_rel ($real_src -> $dest_real)"
+        print -u2 -r -- "$msg"
         (( error_count++ ))
+        unresolved_shadows+=("$msg")
         continue
     fi
 
@@ -286,11 +306,13 @@ for (( i = 1; i <= ${#shadow_files[@]}; i++ )); do
         # neither). The rollback destination is provably vacant -- it's
         # exactly what the failed move above would have filled.
         if mv -- "$dest_real" "$real_src"; then
-            print -u2 -r -- "Error: shadow move failed for $shadow_rel; rolled back"
+            msg="Error: shadow move failed for $shadow_rel; rolled back"
         else
-            print -u2 -r -- "Error: shadow move failed for $shadow_rel; ROLLBACK FAILED -- manually check $dest_real and $real_src"
+            msg="Error: shadow move failed for $shadow_rel; ROLLBACK FAILED -- manually check $dest_real and $real_src"
         fi
+        print -u2 -r -- "$msg"
         (( error_count++ ))
+        unresolved_shadows+=("$msg")
         continue
     fi
 
@@ -302,6 +324,12 @@ print -r -- "----------------------------------------------------"
 print -r -- "Totals: $swap_count swapped, $skip_count skipped, $error_count errors"
 if (( nonshadow_count > 0 )); then
     print -r -- "Ignored $nonshadow_count non-shadow .txt file(s)"
+fi
+if (( ${#unresolved_shadows[@]} > 0 )); then
+    print -r -- "Unresolved shadows:"
+    for entry in "${unresolved_shadows[@]}"; do
+        print -r -- "  $entry"
+    done
 fi
 if (( DRY_RUN )); then
     print -r -- "Dry run complete. No files were moved."
