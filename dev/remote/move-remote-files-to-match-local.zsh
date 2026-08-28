@@ -78,11 +78,38 @@ for t in "${TARGET_TREES[@]}"; do
     TARGET_TREES_ABS+=("$(realpath -- "$t")")
 done
 
+# --target overlap guard: overlapping roots would enumerate the same file
+# twice, double-counting it in the size index so a genuinely unique file
+# is misreported as locally ambiguous and silently skipped, and would
+# also make its stripped relative path depend on which root won.
+roots_overlap() {
+    local a="$1" b="$2"
+    [[ "$a" == "$b" || "$a/" == "$b/"* || "$b/" == "$a/"* ]]
+}
+
+for (( i = 1; i <= ${#TARGET_TREES_ABS[@]}; i++ )); do
+    for (( j = i + 1; j <= ${#TARGET_TREES_ABS[@]}; j++ )); do
+        if roots_overlap "${TARGET_TREES_ABS[$i]}" "${TARGET_TREES_ABS[$j]}"; then
+            echo "Error: Overlapping target directories: ${TARGET_TREES_ABS[$i]} and ${TARGET_TREES_ABS[$j]}" >&2
+            exit 1
+        fi
+    done
+done
+
 # 1. Fetch remote manifest
 echo "--- Fetching remote manifest from ${REMOTE_NAME}:${REMOTE_PATH} ---"
 REMOTE_JSON=$(rclone lsjson --recursive "${REMOTE_NAME}:${REMOTE_PATH}")
 if [[ $? -ne 0 ]]; then
     echo "Error: rclone lsjson failed for ${REMOTE_NAME}:${REMOTE_PATH}" >&2
+    exit 1
+fi
+
+# Without this guard, unparseable output makes the indexing loop consume
+# nothing and the run reports a clean zero-work result indistinguishable
+# from an empty remote -- a silent false success. An empty array remains
+# a valid zero-work run and passes this check.
+if ! echo "$REMOTE_JSON" | jq -e 'type == "array"' >/dev/null 2>&1; then
+    echo "Error: rclone lsjson did not return a JSON array for ${REMOTE_NAME}:${REMOTE_PATH}" >&2
     exit 1
 fi
 

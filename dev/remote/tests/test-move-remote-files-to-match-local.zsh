@@ -196,6 +196,28 @@ reset_failure_injection() {
     rm -f "$FIXROOT/.mkdir_exit" "$FIXROOT/.moveto_exit"
 }
 
+make_stub_rclone_tabbed() {
+    # make_stub_rclone_tabbed <manifest-json-file>
+    # Variant of make_stub_rclone (Task 3, Case S) that logs each
+    # invocation as "<argc>\t<arg1>\t<arg2>\t..." instead of a plain
+    # space-joined line, so a test can verify argument COUNT, not just
+    # substring presence -- needed to prove an operand containing an
+    # embedded space survived as a single argv word rather than being
+    # split into two by the time it reached rclone.
+    local manifest_file="$1"
+    {
+        print -r -- '#!/bin/zsh'
+        print -r -- "{ print -rn -- \"\$#\"; for a in \"\$@\"; do print -rn -- \$'\t'\"\$a\"; done; print; } >> \"$FIXROOT/rclone.args\""
+        print -r -- 'case "$1" in'
+        print -r -- "  lsjson) cat \"$manifest_file\"; exit 0 ;;"
+        print -r -- "  mkdir) [[ -f \"$FIXROOT/.mkdir_exit\" ]] && exit \"\$(cat \"$FIXROOT/.mkdir_exit\")\"; exit 0 ;;"
+        print -r -- "  moveto) [[ -f \"$FIXROOT/.moveto_exit\" ]] && exit \"\$(cat \"$FIXROOT/.moveto_exit\")\"; exit 0 ;;"
+        print -r -- '  *) exit 0 ;;'
+        print -r -- 'esac'
+    } > "$STUB_BIN/rclone"
+    chmod +x "$STUB_BIN/rclone"
+}
+
 # ======================================================================
 # Case A: real run, unique match, misplaced -- one mkdir, one moveto
 # ======================================================================
@@ -654,6 +676,327 @@ assert_contains "Case K: dry run error line matches the real run's (reported in 
 
 args_total_lines_k=$(wc -l < "$FIXROOT/rclone.args")
 assert_equal "Case K: dry run argv log holds only the lsjson line" "$args_total_lines_k" "1"
+
+# ======================================================================
+# Case L: preflight negatives -- each fails fast on stderr before any
+# network call, with empty stdout, exit 1, and an empty argv log
+# afterward (proving the guard precedes the network call).
+# ======================================================================
+CASE_L_TARGET="$FIXROOT/case_l/target"
+mkdir -p "$CASE_L_TARGET"
+
+EMPTY_BIN="$FIXROOT/empty_bin"
+mkdir -p "$EMPTY_BIN"
+
+CASE_L_MANIFEST="$FIXROOT/case_l_manifest.json"
+cat > "$CASE_L_MANIFEST" <<'JSON'
+[]
+JSON
+make_stub_rclone "$CASE_L_MANIFEST"
+reset_args_log
+
+assert_stderr_and_exit "Case L: missing rclone exits 1, stderr names rclone, stdout empty" 1 "'rclone' is required" -- \
+    env PATH="$EMPTY_BIN" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_L_TARGET"
+
+assert_stderr_and_exit "Case L: missing jq exits 1, stderr names jq, stdout empty" 1 "'jq' is required" -- \
+    env PATH="$STUB_BIN" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_L_TARGET"
+
+assert_stderr_and_exit "Case L: unset REMOTE_NAME exits 1, stderr names REMOTE_NAME, stdout empty" 1 "REMOTE_NAME environment variable is required" -- \
+    env -u REMOTE_NAME PATH="$STUB_BIN:$PATH" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_L_TARGET"
+
+assert_stderr_and_exit "Case L: unset REMOTE_PATH exits 1, stderr names REMOTE_PATH, stdout empty" 1 "REMOTE_PATH environment variable is required" -- \
+    env -u REMOTE_PATH PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" \
+    "$SCRIPT" --target "$CASE_L_TARGET"
+
+assert_stderr_and_exit "Case L: zero --target flags exits 1 with Usage, stdout empty" 1 "Usage:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT"
+
+assert_stderr_and_exit "Case L: --dry-run alone (no --target) exits 1 with Usage, stdout empty" 1 "Usage:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --dry-run
+
+assert_stderr_and_exit "Case L: valid --target plus a trailing bare positional word exits 1 with Usage, stdout empty" 1 "Usage:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_L_TARGET" extra_word
+
+assert_stderr_and_exit "Case L: a --target naming a nonexistent directory exits 1, stdout empty" 1 "Target directory not found:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$FIXROOT/case_l/does_not_exist"
+
+args_total_lines_l=$(wc -l < "$FIXROOT/rclone.args")
+assert_equal "Case L: argv log is empty after all preflight negatives" "$args_total_lines_l" "0"
+
+# ======================================================================
+# Case M: overlapping --target directories -- same dir passed twice, and
+# a target nested inside another target. Both exit 1, empty stdout,
+# empty argv log.
+# ======================================================================
+CASE_M_SAME="$FIXROOT/case_m/same"
+mkdir -p "$CASE_M_SAME"
+reset_args_log
+
+assert_stderr_and_exit "Case M: the same directory passed as --target twice exits 1 with the overlap error" 1 "Error: Overlapping target directories:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_M_SAME" --target "$CASE_M_SAME"
+
+CASE_M_OUTER="$FIXROOT/case_m/outer"
+CASE_M_INNER="$FIXROOT/case_m/outer/inner"
+mkdir -p "$CASE_M_INNER"
+
+assert_stderr_and_exit "Case M: a --target nested inside another --target exits 1 with the overlap error" 1 "Error: Overlapping target directories:" -- \
+    env PATH="$STUB_BIN:$PATH" REMOTE_NAME="$TEST_REMOTE_NAME" REMOTE_PATH="$TEST_REMOTE_PATH" \
+    "$SCRIPT" --target "$CASE_M_OUTER" --target "$CASE_M_INNER"
+
+args_total_lines_m=$(wc -l < "$FIXROOT/rclone.args")
+assert_equal "Case M: argv log is empty after both overlap rejections" "$args_total_lines_m" "0"
+
+# ======================================================================
+# Case N: malformed lsjson output -- a non-JSON blob, and a well-formed
+# JSON object instead of an array. Both fail fast rather than silently
+# reporting a clean zero-work run.
+# ======================================================================
+CASE_N_TARGET="$FIXROOT/case_n/target"
+mkdir -p "$CASE_N_TARGET"
+
+CASE_N_MANIFEST="$FIXROOT/case_n_manifest.json"
+print -r -- 'not json at all {{{' > "$CASE_N_MANIFEST"
+make_stub_rclone "$CASE_N_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_N_TARGET"
+
+assert_contains "Case N: non-JSON manifest exits with the not-a-JSON-array error" \
+    "$TOOL_ERR" "Error: rclone lsjson did not return a JSON array for"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case N: exits 1 (non-JSON blob)"
+else
+    _record 1 "Case N: exits 1 (non-JSON blob) (got $TOOL_EXIT)"
+fi
+mkdir_lines_n1=$(args_lines mkdir)
+moveto_lines_n1=$(args_lines moveto)
+assert_equal "Case N: zero mkdir logged (non-JSON blob)" "$mkdir_lines_n1" "0"
+assert_equal "Case N: zero moveto logged (non-JSON blob)" "$moveto_lines_n1" "0"
+
+CASE_N2_MANIFEST="$FIXROOT/case_n2_manifest.json"
+cat > "$CASE_N2_MANIFEST" <<'JSON'
+{"not":"an array"}
+JSON
+make_stub_rclone "$CASE_N2_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_N_TARGET"
+
+assert_contains "Case N: a JSON object (not array) exits with the not-a-JSON-array error" \
+    "$TOOL_ERR" "Error: rclone lsjson did not return a JSON array for"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case N: exits 1 (JSON object)"
+else
+    _record 1 "Case N: exits 1 (JSON object) (got $TOOL_EXIT)"
+fi
+mkdir_lines_n2=$(args_lines mkdir)
+moveto_lines_n2=$(args_lines moveto)
+assert_equal "Case N: zero mkdir logged (JSON object)" "$mkdir_lines_n2" "0"
+assert_equal "Case N: zero moveto logged (JSON object)" "$moveto_lines_n2" "0"
+
+# ======================================================================
+# Case O: empty manifest ([]) is a valid zero-work run
+# ======================================================================
+CASE_O_MANIFEST="$FIXROOT/case_o_manifest.json"
+cat > "$CASE_O_MANIFEST" <<'JSON'
+[]
+JSON
+CASE_O_TARGET="$FIXROOT/case_o/target"
+mkdir -p "$CASE_O_TARGET"
+
+make_stub_rclone "$CASE_O_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_O_TARGET"
+
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case O: exits 0"
+else
+    _record 1 "Case O: exits 0 (got $TOOL_EXIT)"
+fi
+assert_contains "Case O: Totals line reports an all-zero clean run" \
+    "$TOOL_OUT" "Totals: 0 moved, 0 already correct, 0 skipped, 0 errors"
+mkdir_lines_o=$(args_lines mkdir)
+moveto_lines_o=$(args_lines moveto)
+assert_equal "Case O: zero mkdir logged" "$mkdir_lines_o" "0"
+assert_equal "Case O: zero moveto logged" "$moveto_lines_o" "0"
+if [[ "$TOOL_OUT" != *"Unresolved remote files:"* ]]; then
+    _record 0 "Case O: no recap header"
+else
+    _record 1 "Case O: no recap header"
+fi
+
+# ======================================================================
+# Case P: rclone lsjson itself exits non-zero
+# ======================================================================
+CASE_P_TARGET="$FIXROOT/case_p/target"
+mkdir -p "$CASE_P_TARGET"
+{
+    print -r -- '#!/bin/zsh'
+    print -r -- "print -r -- \"\$@\" >> \"$FIXROOT/rclone.args\""
+    print -r -- 'exit 1'
+} > "$STUB_BIN/rclone"
+chmod +x "$STUB_BIN/rclone"
+reset_args_log
+run_tool --target "$CASE_P_TARGET"
+
+assert_contains "Case P: lsjson failure exits with the lsjson-failed error" \
+    "$TOOL_ERR" "Error: rclone lsjson failed for ${TEST_REMOTE_NAME}:${TEST_REMOTE_PATH}"
+if [[ "$TOOL_EXIT" == "1" ]]; then
+    _record 0 "Case P: exits 1"
+else
+    _record 1 "Case P: exits 1 (got $TOOL_EXIT)"
+fi
+mkdir_lines_p=$(args_lines mkdir)
+moveto_lines_p=$(args_lines moveto)
+assert_equal "Case P: zero mkdir logged" "$mkdir_lines_p" "0"
+assert_equal "Case P: zero moveto logged" "$moveto_lines_p" "0"
+
+# ======================================================================
+# Case Q: an empty --target directory (zero files) with a non-empty
+# manifest -- every remote file is reported no-local-file-of-this-size,
+# and the run does not crash on the empty local index.
+# ======================================================================
+CASE_Q_MANIFEST="$FIXROOT/case_q_manifest.json"
+cat > "$CASE_Q_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/q1.JPG","Name":"q1.JPG","Size":61,"IsDir":false},
+  {"Path":"orig/q2.JPG","Name":"q2.JPG","Size":62,"IsDir":false}
+]
+JSON
+CASE_Q_TARGET="$FIXROOT/case_q/target"
+mkdir -p "$CASE_Q_TARGET"
+
+make_stub_rclone "$CASE_Q_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_Q_TARGET"
+
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case Q: exits 0"
+else
+    _record 1 "Case Q: exits 0 (got $TOOL_EXIT)"
+fi
+assert_contains "Case Q: q1 reported no-local-file-of-this-size" \
+    "$TOOL_OUT" "Skip: orig/q1.JPG (size 61: no local file of this size)"
+assert_contains "Case Q: q2 reported no-local-file-of-this-size" \
+    "$TOOL_OUT" "Skip: orig/q2.JPG (size 62: no local file of this size)"
+mkdir_lines_q=$(args_lines mkdir)
+moveto_lines_q=$(args_lines moveto)
+assert_equal "Case Q: zero mkdir logged" "$mkdir_lines_q" "0"
+assert_equal "Case Q: zero moveto logged" "$moveto_lines_q" "0"
+
+# ======================================================================
+# Case R: every local file in the target tree collides on size, and the
+# manifest's entries share those same sizes -- every remote file skips
+# with a stated ambiguity reason.
+# ======================================================================
+CASE_R_MANIFEST="$FIXROOT/case_r_manifest.json"
+cat > "$CASE_R_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/r1.JPG","Name":"r1.JPG","Size":71,"IsDir":false},
+  {"Path":"orig/r2.JPG","Name":"r2.JPG","Size":71,"IsDir":false}
+]
+JSON
+CASE_R_TARGET="$FIXROOT/case_r/target"
+mkfile "$CASE_R_TARGET/x.JPG" 71
+mkfile "$CASE_R_TARGET/y.JPG" 71
+mkfile "$CASE_R_TARGET/z.JPG" 71
+
+make_stub_rclone "$CASE_R_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_R_TARGET"
+
+if [[ "$TOOL_EXIT" == "0" ]]; then
+    _record 0 "Case R: exits 0"
+else
+    _record 1 "Case R: exits 0 (got $TOOL_EXIT)"
+fi
+assert_contains "Case R: r1 skipped with a stated ambiguity reason" \
+    "$TOOL_OUT" "Skip: orig/r1.JPG (size 71: 2 remote files share this size)"
+assert_contains "Case R: r2 skipped with a stated ambiguity reason" \
+    "$TOOL_OUT" "Skip: orig/r2.JPG (size 71: 2 remote files share this size)"
+mkdir_lines_r=$(args_lines mkdir)
+moveto_lines_r=$(args_lines moveto)
+assert_equal "Case R: zero mkdir logged" "$mkdir_lines_r" "0"
+assert_equal "Case R: zero moveto logged" "$moveto_lines_r" "0"
+
+# ======================================================================
+# Case S: spaces -- a remote path with a space, a --target directory
+# whose own name contains a space, holding the matched file inside a
+# subdirectory whose name also contains a space. Verified with the
+# tabbed stub so the moveto operands' argument COUNT is provable, not
+# just substring presence.
+# ======================================================================
+CASE_S_MANIFEST="$FIXROOT/case_s_manifest.json"
+cat > "$CASE_S_MANIFEST" <<'JSON'
+[
+  {"Path":"orig space/img s.JPG","Name":"img s.JPG","Size":81,"IsDir":false}
+]
+JSON
+CASE_S_TARGET="$FIXROOT/case s/target with space"
+mkfile "$CASE_S_TARGET/sub space/img s.JPG" 81
+
+make_stub_rclone_tabbed "$CASE_S_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_S_TARGET"
+
+assert_contains "Case S: stdout reports the move with spaces intact" \
+    "$TOOL_OUT" "Moved: orig space/img s.JPG -> sub space/img s.JPG"
+
+moveto_line_s=$(awk -F'\t' '$2=="moveto"{print; exit}' "$FIXROOT/rclone.args")
+argc_s=$(print -r -- "$moveto_line_s" | awk -F'\t' '{print $1}')
+assert_equal "Case S: moveto receives exactly 3 argv words (moveto + 2 operands, each unsplit)" \
+    "$argc_s" "3"
+src_operand_s=$(print -r -- "$moveto_line_s" | awk -F'\t' '{print $3}')
+dst_operand_s=$(print -r -- "$moveto_line_s" | awk -F'\t' '{print $4}')
+assert_equal "Case S: moveto source operand equals the space-bearing remote spec, unsplit" \
+    "$src_operand_s" "${TEST_REMOTE_NAME}:${TEST_REMOTE_PATH}/orig space/img s.JPG"
+assert_equal "Case S: moveto destination operand equals the space-bearing remote spec, unsplit" \
+    "$dst_operand_s" "${TEST_REMOTE_NAME}:${TEST_REMOTE_PATH}/sub space/img s.JPG"
+
+# ======================================================================
+# Case T: three --target roots, one match in each -- each destination
+# stripped against its OWN root rather than any other.
+# ======================================================================
+CASE_T_MANIFEST="$FIXROOT/case_t_manifest.json"
+cat > "$CASE_T_MANIFEST" <<'JSON'
+[
+  {"Path":"orig/t1.JPG","Name":"t1.JPG","Size":91,"IsDir":false},
+  {"Path":"orig/t2.JPG","Name":"t2.JPG","Size":92,"IsDir":false},
+  {"Path":"orig/t3.JPG","Name":"t3.JPG","Size":93,"IsDir":false}
+]
+JSON
+CASE_T_ROOT1="$FIXROOT/case_t/root1"
+CASE_T_ROOT2="$FIXROOT/case_t/root2"
+CASE_T_ROOT3="$FIXROOT/case_t/root3"
+mkfile "$CASE_T_ROOT1/a/t1.JPG" 91
+mkfile "$CASE_T_ROOT2/b/t2.JPG" 92
+mkfile "$CASE_T_ROOT3/c/t3.JPG" 93
+
+make_stub_rclone "$CASE_T_MANIFEST"
+reset_args_log
+run_tool --target "$CASE_T_ROOT1" --target "$CASE_T_ROOT2" --target "$CASE_T_ROOT3"
+
+assert_contains "Case T: t1 stripped against its own root1" "$TOOL_OUT" "Moved: orig/t1.JPG -> a/t1.JPG"
+assert_contains "Case T: t2 stripped against its own root2" "$TOOL_OUT" "Moved: orig/t2.JPG -> b/t2.JPG"
+assert_contains "Case T: t3 stripped against its own root3" "$TOOL_OUT" "Moved: orig/t3.JPG -> c/t3.JPG"
+moveto_lines_t=$(args_lines moveto)
+assert_equal "Case T: three moveto lines logged, one per target root" "$moveto_lines_t" "3"
+
+# ======================================================================
+# Case U: hash never requested -- across the whole suite's cumulative
+# argv log, no invocation ever carried a hash flag (DD-01: --hash is
+# empirically known to return nothing useful for the MEGA backend).
+# ======================================================================
+reset_args_log
+cumulative_u=$(<"$FIXROOT/rclone.args.all")
+u_hash_lines=$(print -r -- "$cumulative_u" | grep -c -F -- '--hash')
+assert_equal "Case U: no invocation across the whole suite ever requested a hash flag" "$u_hash_lines" "0"
 
 # --- Summary ---
 print -r -- "----------------------------------------------------"
