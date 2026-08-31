@@ -97,7 +97,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- Get true MEGA last-modified time by bypassing rclone (major) — .planning/todos/pending/2026-08-31-get-true-mega-last-modified-time-by-bypassing-rclone.md
 
 ### Blockers/Concerns
 
