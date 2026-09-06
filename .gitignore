@@ -1,0 +1,5 @@
+# .vexp/ hooks (pre-commit, post-merge, post-checkout) reindex on every commit,
+# merge, and checkout and rewrite manifest.json without staging it — tracking
+# the directory produces permanent working-tree noise, and on a Max repos: 1
+# free tier a committed index manifest carries no cross-machine value anyway.
+.vexp/
