@@ -117,6 +117,7 @@ Recent decisions affecting current work:
 | 260827-jsx | Generalize retain-dir-struct-4-revert.zsh to accept multiple --shadow and multiple --target dirs; renamed to retain-dir-struct-4-revert-multi.zsh; updated the two external device-shadow wrapper scripts to the new flag interface | 2026-08-27 | 64121e5 | Verified | [260827-jsx-make-retain-dir-struct-4-revert-zsh-acce](./quick/260827-jsx-make-retain-dir-struct-4-revert-zsh-acce/) |
 | 260827-t70 | Add a final recap in retain-dir-struct-4-revert-multi.zsh's summary listing every skipped/unmatched/errored shadow by name and reason, not just counts | 2026-08-28 | 90a7a32 | | [260827-t70-add-a-final-recap-in-retain-dir-struct-4](./quick/260827-t70-add-a-final-recap-in-retain-dir-struct-4/) |
 | 260828-e42 | Add dev/remote/move-remote-files-to-match-local.zsh: reconcile a MEGA remote path's structure to match one or more local target directories via direct server-side rclone moveto (no MegaSync, no re-download/re-upload), size-matched with skip-and-report on ambiguous collisions | 2026-08-28 | 05a61bb | Verified | [260828-e42-add-dev-remote-move-remote-files-to-matc](./quick/260828-e42-add-dev-remote-move-remote-files-to-matc/) |
+| 260906-8s8 | Bring accumulated untracked artifacts under version control: .planning/phases/03-remote/03-PATTERNS.md plus .planning/phases/04-local-filesys-revert-tool/.gitkeep as one docs commit (b29f427), .gsd/dispatch-isolation-sentinel.json as a separate chore commit (a5b7338) whose body records that the harness rewrites it on every dispatch. adhoc_platform_agent_workflow.txt left untracked at the user's direction. No source changes. | 2026-09-06 | a5b7338 | | [260906-8s8-commit-the-four-untracked-files-planning](./quick/260906-8s8-commit-the-four-untracked-files-planning/) |
 
 ## Deferred Items
 
@@ -133,4 +134,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-15T13:29:15.317Z
 Stopped at: Completed 04-02-PLAN.md
 Resume file: None
-Last activity: 2026-08-28 - Completed quick task 260828-e42: Add dev/remote/move-remote-files-to-match-local.zsh for server-side MEGA remote reconciliation via rclone moveto
+Last activity: 2026-09-06 - Completed quick task 260906-8s8: Track the phase-03/04 planning artifacts and the GSD dispatch sentinel
