@@ -118,6 +118,7 @@ Recent decisions affecting current work:
 | 260827-t70 | Add a final recap in retain-dir-struct-4-revert-multi.zsh's summary listing every skipped/unmatched/errored shadow by name and reason, not just counts | 2026-08-28 | 90a7a32 | | [260827-t70-add-a-final-recap-in-retain-dir-struct-4](./quick/260827-t70-add-a-final-recap-in-retain-dir-struct-4/) |
 | 260828-e42 | Add dev/remote/move-remote-files-to-match-local.zsh: reconcile a MEGA remote path's structure to match one or more local target directories via direct server-side rclone moveto (no MegaSync, no re-download/re-upload), size-matched with skip-and-report on ambiguous collisions | 2026-08-28 | 05a61bb | Verified | [260828-e42-add-dev-remote-move-remote-files-to-matc](./quick/260828-e42-add-dev-remote-move-remote-files-to-matc/) |
 | 260906-8s8 | Bring accumulated untracked artifacts under version control: .planning/phases/03-remote/03-PATTERNS.md plus .planning/phases/04-local-filesys-revert-tool/.gitkeep as one docs commit (b29f427), .gsd/dispatch-isolation-sentinel.json as a separate chore commit (a5b7338) whose body records that the harness rewrites it on every dispatch. adhoc_platform_agent_workflow.txt left untracked at the user's direction. No source changes. | 2026-09-06 | a5b7338 | | [260906-8s8-commit-the-four-untracked-files-planning](./quick/260906-8s8-commit-the-four-untracked-files-planning/) |
+| 260906-97u | Implement the dual-agent ad-hoc platform workflow (adhoc_platform_agent_workflow.txt) as Claude Code artifacts backed by the Vexp MCP server: canonical agents/skill/template in dev/claude/adhoc-platform/ plus a zsh installer, deployed into both the ~/.claude and ~/.claude-byse profiles. Recorded the live free-tier MCP surface (4 of 14 tools exposed), which makes the CLI-based degraded blast-radius path the default on this box. | 2026-09-06 | 333d119 | | [260906-97u-implement-dual-agent-adhoc-platform-work](./quick/260906-97u-implement-dual-agent-adhoc-platform-work/) |
 
 ## Deferred Items
 
@@ -134,4 +135,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-15T13:29:15.317Z
 Stopped at: Completed 04-02-PLAN.md
 Resume file: None
-Last activity: 2026-09-06 - Completed quick task 260906-8s8: Track the phase-03/04 planning artifacts and the GSD dispatch sentinel
+Last activity: 2026-09-06 - Completed quick task 260906-97u: Implement dual-agent adhoc platform workflow with Vexp MCP in both Claude Code profiles
