@@ -83,12 +83,14 @@ for CFG_DIR in "$@"; do
     mkdir -p "$CFG_DIR_ABS/agents"
     mkdir -p "$CFG_DIR_ABS/skills/adhoc-platform-task/assets"
 
-    # Agent files: substitute the placeholder token with this profile's own
+    # Placeholder-bearing files: substitute the token with this profile's own
     # absolute config directory, then compare against the existing deployed
-    # copy before writing.
+    # copy before writing. SKILL.md belongs here too — it cites the template by
+    # absolute path, so a verbatim copy would leave the token unresolved.
     for pair in \
         "$AGENT_INVESTIGATOR_SRC:$CFG_DIR_ABS/agents/adhoc-investigator.md" \
-        "$AGENT_EXECUTOR_SRC:$CFG_DIR_ABS/agents/adhoc-executor.md"
+        "$AGENT_EXECUTOR_SRC:$CFG_DIR_ABS/agents/adhoc-executor.md" \
+        "$SKILL_SRC:$CFG_DIR_ABS/skills/adhoc-platform-task/SKILL.md"
     do
         SRC="${pair%%:*}"
         DEST="${pair#*:}"
@@ -107,9 +109,8 @@ for CFG_DIR in "$@"; do
         fi
     done
 
-    # Skill and template: copied verbatim, same diff-before-write rule.
+    # Template: copied verbatim, same diff-before-write rule.
     for pair in \
-        "$SKILL_SRC:$CFG_DIR_ABS/skills/adhoc-platform-task/SKILL.md" \
         "$TEMPLATE_SRC:$CFG_DIR_ABS/skills/adhoc-platform-task/assets/adhoc_context_template.txt"
     do
         SRC="${pair%%:*}"
