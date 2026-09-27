@@ -1,17 +1,25 @@
 #!/bin/zsh
 
 zmodload zsh/zutil
-zparseopts -D -E -F -- f:=opt_f -fuzz:=opt_f h=opt_h -help=opt_h || exit 1
+zparseopts -D -E -F -- f:=opt_f -fuzz:=opt_f e:=opt_e -edges:=opt_e h=opt_h -help=opt_h || exit 1
 
 if (( ${#opt_h} )); then
     cat <<'EOF'
 Recursively trim uniform borders from manga page images, in place.
 
-Usage: trim-borders.zsh [-f N] <dir>
+Usage: trim-borders.zsh [-f N] [-e all|v|h] <dir>
 
 Options:
   -f N, --fuzz N   Fuzz percent for border-color matching (default: 3).
                     Raise this for noisy/compressed JPEG scans.
+  -e MODE, --edges MODE   Which edges to trim (default: all):
+    all  trim all four edges (default)
+    v    vertical: trim top and bottom edges only
+    h    horizontal: trim left and right edges only
+
+  In v/h mode, the border color is sampled from the image corners, so if
+  the untrimmed edges also carry a border, only the outermost layer on
+  the selected edges is removed.
 
 Arguments:
   <dir>            Directory to process recursively. Required -- no
@@ -32,6 +40,8 @@ Behavior:
 Examples:
   trim-borders.zsh ch42/              # trim every image under ch42/
   trim-borders.zsh -f 10 ch42/        # more tolerant fuzz for noisy scans
+  trim-borders.zsh -e v ch42/         # trim top/bottom only
+  trim-borders.zsh -e h ch42/         # trim left/right only
 
 Requires: ImageMagick 7 (magick)
 Supports: jpg, jpeg, png (any letter case)
@@ -47,8 +57,14 @@ if ! [[ "$fuzz" =~ '^[0-9]+([.][0-9]+)?$' ]]; then
     exit 1
 fi
 
+edges="${opt_e[2]:-all}"
+if [[ "$edges" != (all|v|h) ]]; then
+    echo "Error: edges '$edges' must be one of: all, v, h" >&2
+    exit 1
+fi
+
 if (( $# != 1 )); then
-    echo "Usage: trim-borders.zsh [-f N] <dir>" >&2
+    echo "Usage: trim-borders.zsh [-f N] [-e all|v|h] <dir>" >&2
     exit 1
 fi
 
@@ -63,7 +79,11 @@ if ! command -v magick &>/dev/null; then
     exit 1
 fi
 
-edge_args=()
+case "$edges" in
+    v) edge_args=(-define trim:edges=north,south) ;;
+    h) edge_args=(-define trim:edges=east,west) ;;
+    *) edge_args=() ;;
+esac
 
 tmpdir=$(mktemp -d) || { echo "Error: failed to create a temp directory" >&2; exit 1; }
 pending=""

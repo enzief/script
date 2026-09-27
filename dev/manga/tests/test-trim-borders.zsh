@@ -166,6 +166,50 @@ DOTFILE_LEFTOVER_1=$(find "$FIXROOT" -name '.trim-borders.*' 2>/dev/null | wc -l
 assert_eq "Task1: no .trim-borders.* leftovers anywhere under the fixture root" \
     "$DOTFILE_LEFTOVER_1" "0"
 
+# ======================================================================
+# Task 2: -e/--edges all|v|h (D-10)
+# ======================================================================
+
+EDGE_ALL_DIR="$FIXROOT/t-edge-all"
+mkpage "$EDGE_ALL_DIR/page.png" white 600x900
+run_tb -e all "$EDGE_ALL_DIR"
+assert_eq "Edges all: trims both axes to 600x900" \
+    "$(img_dims "$EDGE_ALL_DIR/page.png")" "600 900"
+assert_eq "Edges all: exit code is 0" "$TB_EXIT" "0"
+
+EDGE_V_DIR="$FIXROOT/t-edge-v"
+mkpage "$EDGE_V_DIR/page.png" white 600x900
+run_tb -e v "$EDGE_V_DIR"
+assert_eq "Edges v: width unchanged, height trimmed to 800x900" \
+    "$(img_dims "$EDGE_V_DIR/page.png")" "800 900"
+assert_eq "Edges v: exit code is 0" "$TB_EXIT" "0"
+
+EDGE_H_DIR="$FIXROOT/t-edge-h"
+mkpage "$EDGE_H_DIR/page.png" white 600x900
+run_tb --edges h "$EDGE_H_DIR"
+assert_eq "Edges h (long form): height unchanged, width trimmed to 600x1200" \
+    "$(img_dims "$EDGE_H_DIR/page.png")" "600 1200"
+assert_eq "Edges h: exit code is 0" "$TB_EXIT" "0"
+
+EDGE_BAD_DIR="$FIXROOT/t-edge-bad"
+mkpage "$EDGE_BAD_DIR/page.png" white 600x900
+EDGE_BAD_SHA_BEFORE=$(file_sha "$EDGE_BAD_DIR/page.png")
+run_tb -e diag "$EDGE_BAD_DIR"
+EDGE_BAD_SHA_AFTER=$(file_sha "$EDGE_BAD_DIR/page.png")
+assert_eq "Edges diag: exit code is 1" "$TB_EXIT" "1"
+assert_contains "Edges diag: stderr names the bad value" \
+    "$TB_ERR" "Error: edges 'diag' must be one of: all, v, h"
+assert_eq "Edges diag: fixture untouched" "$EDGE_BAD_SHA_AFTER" "$EDGE_BAD_SHA_BEFORE"
+
+run_tb --help
+assert_eq "Help: exit code is 0" "$TB_EXIT" "0"
+assert_contains "Help: documents 'all' edge mode" \
+    "$TB_OUT" "all  trim all four edges (default)"
+assert_contains "Help: documents 'v' edge mode" \
+    "$TB_OUT" "v    vertical: trim top and bottom edges only"
+assert_contains "Help: documents 'h' edge mode" \
+    "$TB_OUT" "h    horizontal: trim left and right edges only"
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
