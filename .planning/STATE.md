@@ -1,18 +1,19 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
-milestone_name: milestone
 current_phase: 04
 status: completed
 stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-08-15T13:38:33.849Z"
+last_updated: "2026-09-27T18:03:58.125Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 04 execution started
+state_head: 8a57caae535a1edf7ea71223eccf0ffdacdd5397
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 7
   completed_plans: 7
+milestone_name: milestone
 current_phase_name: local-filesys-revert-tool
 ---
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 | 260828-e42 | Add dev/remote/move-remote-files-to-match-local.zsh: reconcile a MEGA remote path's structure to match one or more local target directories via direct server-side rclone moveto (no MegaSync, no re-download/re-upload), size-matched with skip-and-report on ambiguous collisions | 2026-08-28 | 05a61bb | Verified | [260828-e42-add-dev-remote-move-remote-files-to-matc](./quick/260828-e42-add-dev-remote-move-remote-files-to-matc/) |
 | 260906-8s8 | Bring accumulated untracked artifacts under version control: .planning/phases/03-remote/03-PATTERNS.md plus .planning/phases/04-local-filesys-revert-tool/.gitkeep as one docs commit (b29f427), .gsd/dispatch-isolation-sentinel.json as a separate chore commit (a5b7338) whose body records that the harness rewrites it on every dispatch. adhoc_platform_agent_workflow.txt left untracked at the user's direction. No source changes. | 2026-09-06 | a5b7338 | | [260906-8s8-commit-the-four-untracked-files-planning](./quick/260906-8s8-commit-the-four-untracked-files-planning/) |
 | 260906-97u | Implement the dual-agent ad-hoc platform workflow (adhoc_platform_agent_workflow.txt) as Claude Code artifacts backed by the Vexp MCP server: canonical agents/skill/template in dev/claude/adhoc-platform/ plus a zsh installer, deployed into both the ~/.claude and ~/.claude-byse profiles. Recorded the live free-tier MCP surface (4 of 14 tools exposed), which makes the CLI-based degraded blast-radius path the default on this box. | 2026-09-06 | 333d119 | | [260906-97u-implement-dual-agent-adhoc-platform-work](./quick/260906-97u-implement-dual-agent-adhoc-platform-work/) |
+| 260927-g0u | Add trim-borders.zsh manga script: single-process trim loop, no BMP round-trip, -f fuzz, -e edges, size guard | 2026-09-27 | 8a57caa | — | [260927-g0u-add-new-manga-script-trim-borders-and-op](./quick/260927-g0u-add-new-manga-script-trim-borders-and-op/) |
 
 ## Deferred Items
 
@@ -135,4 +137,4 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-08-15T13:29:15.317Z
 Stopped at: Completed 04-02-PLAN.md
 Resume file: None
-Last activity: 2026-09-06 - Completed quick task 260906-97u: Implement dual-agent adhoc platform workflow with Vexp MCP in both Claude Code profiles
+Last activity: 2026-09-27 - Completed quick task 260927-g0u: Add trim-borders.zsh manga script: single-process trim loop, no BMP round-trip, -f fuzz, -e edges, size guard
