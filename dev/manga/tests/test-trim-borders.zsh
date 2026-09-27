@@ -210,6 +210,161 @@ assert_contains "Help: documents 'v' edge mode" \
 assert_contains "Help: documents 'h' edge mode" \
     "$TB_OUT" "h    horizontal: trim left and right edges only"
 
+# ======================================================================
+# Task 3: full regression sweep
+# ======================================================================
+
+MAIN_DIR="$FIXROOT/t-main"
+mkdir -p -- "$MAIN_DIR"
+
+mkpage "$MAIN_DIR/black.png" black 600x900
+
+magick -size 800x1200 xc:white \
+    \( -size 700x1100 "xc:#808080" \) -gravity center -composite \
+    \( -size 660x1060 xc:white \) -gravity center -composite \
+    \( -size 600x900 pattern:checkerboard \) -gravity center -composite \
+    "$MAIN_DIR/nested.png" 2>/dev/null
+
+mkpage "$MAIN_DIR/page.jpg" white 600x900 -quality 87
+PAGE_JPG_Q_BEFORE=$(img_q "$MAIN_DIR/page.jpg")
+
+mkpage "$MAIN_DIR/UP.PNG" white 600x900
+
+mkpage "$MAIN_DIR/mode.png" white 600x900
+chmod 640 -- "$MAIN_DIR/mode.png"
+
+magick -size 600x900 pattern:checkerboard "$MAIN_DIR/borderless.png" 2>/dev/null
+BORDERLESS_SHA_BEFORE=$(file_sha "$MAIN_DIR/borderless.png")
+
+magick -size 800x1200 xc:white "$MAIN_DIR/blank.png" 2>/dev/null
+BLANK_SHA_BEFORE=$(file_sha "$MAIN_DIR/blank.png")
+
+mkpage "$MAIN_DIR/small.png" white 300x400
+SMALL_SHA_BEFORE=$(file_sha "$MAIN_DIR/small.png")
+
+magick -size 800x1200 xc:white \
+    \( -size 600x900 xc:black \) -gravity center -composite \
+    "$MAIN_DIR/flat.png" 2>/dev/null
+FLAT_SHA_BEFORE=$(file_sha "$MAIN_DIR/flat.png")
+
+assert_eq "Main: page.jpg source reads Q87 before the run" "$PAGE_JPG_Q_BEFORE" "87"
+
+run_tb "$MAIN_DIR"
+
+assert_contains "Main: summary matches the exact contract" \
+    "$TB_OUT" "Done: 5 trimmed, 1 no border, 3 skipped, 0 errors."
+assert_eq "Main: exit code is 0" "$TB_EXIT" "0"
+
+assert_eq "Main: black.png trims to 600x900" "$(img_dims "$MAIN_DIR/black.png")" "600 900"
+assert_eq "Main: nested.png peels all layers to 600x900" "$(img_dims "$MAIN_DIR/nested.png")" "600 900"
+
+assert_eq "Main: page.jpg stays JPEG" "$(img_fmt "$MAIN_DIR/page.jpg")" "JPEG"
+assert_eq "Main: page.jpg keeps source quality 87" "$(img_q "$MAIN_DIR/page.jpg")" "87"
+PAGE_JPG_DIMS=($(img_dims "$MAIN_DIR/page.jpg"))
+if (( PAGE_JPG_DIMS[1] < 800 && PAGE_JPG_DIMS[2] < 1200 )); then
+    _record 0 "Main: page.jpg was actually trimmed (both dims shrank)"
+else
+    _record 1 "Main: page.jpg was actually trimmed (both dims shrank) (got ${PAGE_JPG_DIMS[1]}x${PAGE_JPG_DIMS[2]})"
+fi
+
+assert_eq "Main: UP.PNG stays PNG" "$(img_fmt "$MAIN_DIR/UP.PNG")" "PNG"
+assert_eq "Main: UP.PNG trims to 600x900" "$(img_dims "$MAIN_DIR/UP.PNG")" "600 900"
+
+assert_eq "Main: mode.png keeps mode 640" "$(stat -c %a "$MAIN_DIR/mode.png")" "640"
+assert_eq "Main: mode.png trims to 600x900" "$(img_dims "$MAIN_DIR/mode.png")" "600 900"
+
+assert_eq "Main: borderless.png byte-identical" "$(file_sha "$MAIN_DIR/borderless.png")" "$BORDERLESS_SHA_BEFORE"
+assert_contains "Main: borderless.png reported as no border" "$TB_OUT" "No border: 'borderless.png'"
+
+assert_eq "Main: blank.png byte-identical" "$(file_sha "$MAIN_DIR/blank.png")" "$BLANK_SHA_BEFORE"
+assert_contains "Main: blank.png reported with a Warning:" "$TB_ERR" "left untouched: 'blank.png'"
+
+assert_eq "Main: small.png byte-identical (pins the 50% floor)" "$(file_sha "$MAIN_DIR/small.png")" "$SMALL_SHA_BEFORE"
+assert_contains "Main: small.png reported with a Warning:" "$TB_ERR" "left untouched: 'small.png'"
+
+assert_eq "Main: flat.png byte-identical" "$(file_sha "$MAIN_DIR/flat.png")" "$FLAT_SHA_BEFORE"
+assert_contains "Main: flat.png reported with a Warning:" "$TB_ERR" "left untouched: 'flat.png'"
+
+# Idempotency: PNGs/uppercase-PNGs must not shift on a second run.
+typeset -A png_sha_before
+for f in "$MAIN_DIR"/*.png "$MAIN_DIR"/*.PNG; do
+    [[ -f "$f" ]] || continue
+    png_sha_before[$f]=$(file_sha "$f")
+done
+run_tb "$MAIN_DIR"
+idem_ok=1
+for f in "${(k)png_sha_before[@]}"; do
+    if [[ "$(file_sha "$f")" != "${png_sha_before[$f]}" ]]; then
+        idem_ok=0
+        print -r -- "  idempotency mismatch: $f"
+    fi
+done
+if (( idem_ok )); then
+    _record 0 "Main: second run leaves every PNG byte-identical (idempotent)"
+else
+    _record 1 "Main: second run leaves every PNG byte-identical (idempotent)"
+fi
+
+ERR_DIR="$FIXROOT/t-err"
+mkdir -p -- "$ERR_DIR"
+print -r -- "not an image" > "$ERR_DIR/bad.png"
+mkpage "$ERR_DIR/good.png" white 600x900
+run_tb "$ERR_DIR"
+
+assert_eq "Err: exit code is 1" "$TB_EXIT" "1"
+assert_contains "Err: stderr reports Error: for bad.png" \
+    "$TB_ERR" "Error: cannot read image: 'bad.png'"
+assert_eq "Err: good.png still trims to 600x900" "$(img_dims "$ERR_DIR/good.png")" "600 900"
+assert_contains "Err: summary matches the exact contract" \
+    "$TB_OUT" "Done: 1 trimmed, 0 no border, 0 skipped, 1 errors."
+
+# Argument validation
+FUZZ_BAD_DIR="$FIXROOT/t-fuzz-bad"
+mkpage "$FUZZ_BAD_DIR/page.png" white 600x900
+FUZZ_BAD_SHA=$(file_sha "$FUZZ_BAD_DIR/page.png")
+run_tb -f abc "$FUZZ_BAD_DIR"
+assert_eq "Arg: -f abc exits 1" "$TB_EXIT" "1"
+assert_contains "Arg: -f abc stderr message" "$TB_ERR" "Error: fuzz 'abc' is not numeric"
+assert_eq "Arg: -f abc leaves fixture untouched" "$(file_sha "$FUZZ_BAD_DIR/page.png")" "$FUZZ_BAD_SHA"
+
+run_tb
+assert_eq "Arg: no positional exits 1" "$TB_EXIT" "1"
+assert_contains "Arg: no positional stderr Usage:" "$TB_ERR" "Usage:"
+
+run_tb "$FUZZ_BAD_DIR" extra
+assert_eq "Arg: two positionals exits 1" "$TB_EXIT" "1"
+
+run_tb "$FIXROOT/does-not-exist"
+assert_eq "Arg: nonexistent dir exits 1" "$TB_EXIT" "1"
+assert_contains "Arg: nonexistent dir stderr message" "$TB_ERR" "Error: directory"
+
+EMPTY_DIR="$FIXROOT/t-empty"
+mkdir -p -- "$EMPTY_DIR"
+run_tb "$EMPTY_DIR"
+assert_eq "Arg: empty dir exits 1" "$TB_EXIT" "1"
+assert_contains "Arg: empty dir stderr message" "$TB_ERR" "No image files found"
+
+FUZZ_OK_DIR="$FIXROOT/t-fuzz-ok"
+mkpage "$FUZZ_OK_DIR/page.png" white 600x900
+run_tb --fuzz 5 "$FUZZ_OK_DIR"
+assert_eq "Arg: --fuzz 5 exits 0" "$TB_EXIT" "0"
+assert_eq "Arg: --fuzz 5 trims to 600x900" "$(img_dims "$FUZZ_OK_DIR/page.png")" "600 900"
+
+FUZZ_DEC_DIR="$FIXROOT/t-fuzz-dec"
+mkpage "$FUZZ_DEC_DIR/page.png" white 600x900
+run_tb -f 2.5 "$FUZZ_DEC_DIR"
+assert_eq "Arg: -f 2.5 exits 0" "$TB_EXIT" "0"
+
+run_tb -h
+assert_eq "Arg: -h exits 0" "$TB_EXIT" "0"
+assert_contains "Arg: -h stdout has Usage:" "$TB_OUT" "Usage:"
+
+TMP_LEFTOVER_2=$(find "$FIXROOT/tmp" -mindepth 1 2>/dev/null | wc -l)
+assert_eq "Final: script's mktemp area is empty" "$TMP_LEFTOVER_2" "0"
+DOTFILE_LEFTOVER_2=$(find "$FIXROOT" -name '.trim-borders.*' 2>/dev/null | wc -l)
+assert_eq "Final: no .trim-borders.* leftovers anywhere under the fixture root" \
+    "$DOTFILE_LEFTOVER_2" "0"
+
 # --- Summary ---
 print -r -- "----------------------------------------------------"
 print -r -- "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
